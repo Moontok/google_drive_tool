@@ -1,10 +1,7 @@
 from setuptools import setup
 
-from google_sheets_tool import __version__
-
 setup(
     name='google_sheets_tool',
-    version=__version__,
     install_requires=[
         "googleapi"
     ],

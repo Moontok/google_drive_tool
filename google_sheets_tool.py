@@ -1,13 +1,12 @@
 # Google Sheets API Doc: https://developers.google.com/sheets/api/reference/rest
 
+__version__ = "dev"
 
 from typing import Optional
 
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import Resource, build
 
-
-__version__ = "dev"
 
 
 class GoogleSheetBase:

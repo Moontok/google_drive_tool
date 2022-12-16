@@ -6,7 +6,7 @@ setup(
     name='google_sheets_tool',
     version=__version__,
     install_requires=[
-        "googleapiclient"
+        "googleapi"
     ],
     url='https://github.com/Moontok/google_drive_tool',
     author='Zackary Spink',

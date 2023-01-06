@@ -614,7 +614,12 @@ class GoogleSheetUpdater(GoogleSheetBase):
                 alpha_chars += char
             else:
                 num_chars += char
-
+        
+        if num_chars == "":
+            return [base_columns[alpha_chars], -1]
+        if alpha_chars == "":
+            return [0, int(num_chars)]
+        
         return [base_columns[alpha_chars], int(num_chars)]
 
     def clear_spreadsheet_values(self, sheet_name: str) -> None:

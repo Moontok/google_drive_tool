@@ -239,13 +239,14 @@ class GoogleSheetUpdater(GoogleSheetBase):
         )
 
     def set_sheet_grid_properties_request(
-        self, name: str, number_of_rows: int = 1000, number_of_columns: int = 26
+        self, name: str, number_of_rows: int = 1000, number_of_columns: int = 26, hideGridlines: bool=False
     ):
         """Changes the rows and columns for a sheet."""
 
         new_grid_properties = {
             "rowCount": number_of_rows,
             "columnCount": number_of_columns,
+            "hideGridlines": hideGridlines,
         }
 
         self.requests.append(
@@ -622,11 +623,11 @@ class GoogleSheetUpdater(GoogleSheetBase):
         
         return [base_columns[alpha_chars], int(num_chars)]
 
-    def clear_spreadsheet_values(self, sheet_name: str) -> None:
+    def clear_spreadsheet_values(self, cell_range: str) -> None:
         """Clear the values on current targeted spreadsheet."""
 
         self.sheet.values().clear(
-            spreadsheetId=self.spreadsheet_id, range=sheet_name
+            spreadsheetId=self.spreadsheet_id, range=cell_range
         ).execute()
 
     def clear_spreadsheet_colors(self, sheet_name: str) -> None:

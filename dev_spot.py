@@ -23,8 +23,8 @@ def main():
     try:
         tool.set_spreadsheet(general_info["sheet_id"])
         
-        tool.add_values_request("Sheet1!A24", [[99]])
-        tool.batch_update_values()
+        tool.resize_request("SheetNew!11:11", 200)
+        tool.batch_update()
 
 
     except HttpError as e:

@@ -210,9 +210,11 @@ class SheetTool:
         except HttpError as e:
             raise e
 
-    def add_values_request(self, starting_cell: str, rows_of_values: list[list]) -> None:
-        """Add values starting at the specified cell. The values will
-        be added right and down from the starting cell.
+    def insert_values_request(self, starting_cell: str, rows_of_values: list[list]) -> None:
+        """Insert values starting at the specified cell. The values will
+        be added right and down from the starting cell. Can't select a starting_cell
+        that is not located on the sheet. However, rows will be added if the starting_cell
+        is located on the sheet but the rows_of_values extend past the sheet.
         Adds the request to update_values_request pool.
         This will update when the next batch_update_values is called.
         
@@ -223,8 +225,8 @@ class SheetTool:
 
         self._update_values_requests.append({"range": starting_cell, "values": rows_of_values})
 
-    def change_google_sheet_title_request(self, name: str) -> None:
-        """Change the name of the google sheet.
+    def change_title_request(self, name: str) -> None:
+        """Change the title of the Google spreadsheet.
         Adds the request to requests pool.
         This will update when the next batch_update is called.
 
@@ -337,7 +339,7 @@ class SheetTool:
             size (int): Size to resize the column or row.
         """
 
-        processed_range: tuple = self.process_range_as_str(range)
+        processed_range: tuple = self.process_range(range)
 
         dimension: str = ""
         start_index: int = 0
@@ -392,7 +394,7 @@ class SheetTool:
             wrapping (str, optional): Wrapping strategy. Defaults to "CLIP".
         """
 
-        processed_range: tuple = self.process_range_as_str(range)
+        processed_range: tuple = self.process_range(range)
 
         format_style = {
             "repeatCell": {
@@ -430,7 +432,7 @@ class SheetTool:
             merge_type (str, optional): Type of merge. Defaults to "MERGE_ALL".
         """
 
-        processed_range: tuple = self.process_range_as_str(range)
+        processed_range: tuple = self.process_range(range)
 
         format_style = {
             "mergeCells": {
@@ -472,7 +474,7 @@ class SheetTool:
             text_color (tuple, optional): Color of the text (Red, Green, Blue). Defaults to (0, 0, 0).
         """
 
-        processed_range: tuple = self.process_range_as_str(range)
+        processed_range: tuple = self.process_range(range)
 
         format_style = {
             "repeatCell": {
@@ -515,7 +517,7 @@ class SheetTool:
             fill_color (tuple, optional): Color of the fill (Red, Green, Blue). Defaults to (1, 1, 1).
         """
 
-        processed_range: tuple = self.process_range_as_str(range)
+        processed_range: tuple = self.process_range(range)
 
         format_style = {
             "repeatCell": {
@@ -565,7 +567,7 @@ class SheetTool:
             color (tuple, optional): Color of the border. Defaults to (0, 0, 0).
         """
 
-        processed_range: tuple = self.process_range_as_str(range)
+        processed_range: tuple = self.process_range(range)
 
         border_format = {
             "updateBorders": {
@@ -621,7 +623,7 @@ class SheetTool:
             color (tuple, optional): Color of the border. Defaults to (0, 0, 0).
         """
 
-        processed_range: tuple = self.process_range_as_str(range)
+        processed_range: tuple = self.process_range(range)
 
         border_format = {
             "updateBorders": {

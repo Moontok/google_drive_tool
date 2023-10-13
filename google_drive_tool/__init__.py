@@ -6,6 +6,7 @@ from typing import Optional
 
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import Resource, build
+from googleapiclient.errors import HttpError
 
 
 class SheetBase:
@@ -206,14 +207,17 @@ class SheetUpdater(SheetBase):
         and then clear the update_values_requests pool.
         """
 
-        values_body = {
-            "valueInputOption": "USER_ENTERED",
-            "data": self._update_values_requests,
-        }
-        self._sheet.values().batchUpdate(
-            spreadsheetId=self._spreadsheet_id, body=values_body
-        ).execute()
-        self._update_values_requests.clear()
+        try:
+            values_body = {
+                "valueInputOption": "USER_ENTERED",
+                "data": self._update_values_requests,
+            }
+            self._sheet.values().batchUpdate(
+                spreadsheetId=self._spreadsheet_id, body=values_body
+            ).execute()
+            self._update_values_requests.clear()
+        except HttpError as e:
+            raise e
 
     def batch_update(self) -> None:
         """Batch updates all current requests.
@@ -221,9 +225,12 @@ class SheetUpdater(SheetBase):
         and then clear the requests pool.
         """
 
-        body: dict = {"requests": self._requests}
-        self._sheet.batchUpdate(spreadsheetId=self._spreadsheet_id, body=body).execute()
-        self._requests.clear()
+        try:
+            body: dict = {"requests": self._requests}
+            self._sheet.batchUpdate(spreadsheetId=self._spreadsheet_id, body=body).execute()
+            self._requests.clear()
+        except HttpError as e:
+            raise e
 
     def append_value(self, value: list, range: str = "A1") -> None:
         """Append a value to the end of the target spreadsheet.
@@ -234,13 +241,16 @@ class SheetUpdater(SheetBase):
             range (str, optional): Range of the sheet. Defaults to "A1".
         """
 
-        body: dict = {"values": value}
-        self._sheet.values().append(
-            spreadsheetId=self._spreadsheet_id,
-            range=range,
-            valueInputOption="USER_ENTERED",
-            body=body,
-        ).execute()
+        try:
+            body: dict = {"values": value}
+            self._sheet.values().append(
+                spreadsheetId=self._spreadsheet_id,
+                range=range,
+                valueInputOption="USER_ENTERED",
+                body=body,
+            ).execute()
+        except HttpError as e:
+            raise e
 
     def add_values_request(self, cell_range: str, rows_of_values: list) -> None:
         """Add values in a range.
@@ -819,9 +829,12 @@ class SheetUpdater(SheetBase):
             range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
         """
 
-        self._sheet.values().clear(
-            spreadsheetId=self._spreadsheet_id, range=cell_range
-        ).execute()
+        try:
+            self._sheet.values().clear(
+                spreadsheetId=self._spreadsheet_id, range=cell_range
+            ).execute()
+        except HttpError as e:
+            raise e
 
     def clear_sheet_colors(self, sheet_name: str) -> None:
         """Clear the color of a sheet by calling fill_range_request and setting to white.

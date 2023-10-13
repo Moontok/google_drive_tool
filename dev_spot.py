@@ -15,8 +15,12 @@ def main():
     with open(general_info_path) as f:
         general_info = json.load(f)
 
-    
-    
+    tool = gdt.SheetReader()
+    tool.setup(g_info_path)
+    values = tool.get_sheet_values(general_info["sheet_id"], "Sheet1!A")
+
+    print(values)
+
 
 def json_pretty_dump(data: dict, file_name: str) -> None:
     """Create a pretty json file from a dict

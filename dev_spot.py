@@ -22,12 +22,15 @@ def main():
 
     try:
         tool.set_spreadsheet(general_info["sheet_id"])
-        values = tool.get_values("Sheet1!A1:B3")
-        print(values)
+        
+        tool.add_values_request("Sheet1!A24", [[99]])
+        tool.batch_update_values()
 
 
     except HttpError as e:
-        print(e)
+        print(f"Error with communicating with Google:\n{e}")
+    except KeyError as e:
+        print(f"Error with key:\n{e}")
 
 
 def json_pretty_dump(data: dict, file_name: str) -> None:

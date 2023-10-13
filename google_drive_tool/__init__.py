@@ -31,8 +31,12 @@ class SheetTool:
             service_account_file (str): Path to the service account file
         """
 
-        self.authenticate(service_account_file)
-        self._service = build("sheets", "v4", credentials=self._creds)
+        try:
+            self.authenticate(service_account_file)
+            self._service = build("sheets", "v4", credentials=self._creds)
+        except HttpError as e:
+            raise e
+        
         self._sheet = self._service.spreadsheets()
 
     def authenticate(self, service_account_file: str) -> Credentials:
@@ -49,9 +53,12 @@ class SheetTool:
             "https://www.googleapis.com/auth/spreadsheets",
             "https://www.googleapis.com/auth/drive",
         ]
-        self._creds = Credentials.from_service_account_file(
-            service_account_file, scopes=g_scopes
-        )
+        try:
+            self._creds = Credentials.from_service_account_file(
+                service_account_file, scopes=g_scopes
+            )
+        except HttpError as e:
+            raise e
 
     def create_spreadsheet(self, filename: str, folder_id: str) -> None:
         """Create a new spreadsheet
@@ -72,7 +79,7 @@ class SheetTool:
 
             response = drive_service.files().create(body=file_metadata).execute()
             self._spreadsheet_id = response["id"]
-            self._current_sheets = {"Sheet1": {"id": 0, "next_row": 1}}
+            self._current_sheets = {"Sheet1": 0}
         except HttpError as e:
             raise e
 
@@ -94,7 +101,7 @@ class SheetTool:
             title = sheet["properties"]["title"]
             id = sheet["properties"]["sheetId"]
 
-            self._current_sheets[title] = {"id": id, "next_row": 1}    
+            self._current_sheets[title] = id   
 
     def get_spreadsheet_properties(self) -> dict:
         """Get the properties of a spreadsheet.
@@ -127,11 +134,11 @@ class SheetTool:
         )
         return response.get("values")
 
-    def get_cell_color(self, range: str) -> dict:
+    def get_cell_color(self, cell: str) -> dict:
         """Get the color of a cell
 
         Args:
-            range (str): Range of the spreadsheet. Ex: Sheet1!A1:B2 or Sheet1
+            cell (str): Location of cell in the spreadsheet. Ex: Sheet1!A1
 
         Returns:
             dict: Color of the cell. Ex: {'red': 0.0, 'green': 0.0, 'blue': 0.0}
@@ -140,7 +147,7 @@ class SheetTool:
         try:
             results = self._sheet.get(
                 spreadsheetId=self._spreadsheet_id,
-                ranges=range,
+                ranges=cell,
                 fields="sheets/data/rowData/values/effectiveFormat/backgroundColor",
             ).execute()
         except HttpError as e:
@@ -151,19 +158,7 @@ class SheetTool:
             "effectiveFormat"
         ]["backgroundColor"]
 
-    def get_next_row(self, sheet_name: str) -> int:
-        """Returns the last row number that has been appended to the specified sheet.
-        
-        Args:
-            sheet_name (str): Name of the sheet to check
-        
-        Returns:
-            int: Last row number that has been appended to the specified sheet
-        """
-
-        return self._current_sheets[sheet_name]["next_row"]
-
-    def values_batch_update(self) -> None:
+    def batch_update_values(self) -> None:
         """Batch updates all current value requests.
         This will execute all update_values_requests in the order they were added
         and then clear the update_values_requests pool.
@@ -194,47 +189,39 @@ class SheetTool:
         except HttpError as e:
             raise e
 
-    def append_value(self, value: list, range: str = "A1") -> None:
-        """Append a value to the end of the target spreadsheet.
+    def append_values(self, value: list, cell: str = "A1") -> None:
+        """Append a list of values in the next empty cell in that column
+        starting at the specified cell and extending down and to the right.
         This is not batched and will be executed immediately.
         
         Args:
-            value (list): Value to append
-            range (str, optional): Range of the sheet. Defaults to "A1".
+            values (list): Values to append
+            cell (str, optional): Cell location in the sheet. Defaults to "A1".
         """
 
         try:
             body: dict = {"values": value}
             self._sheet.values().append(
                 spreadsheetId=self._spreadsheet_id,
-                range=range,
+                range=cell,
                 valueInputOption="USER_ENTERED",
                 body=body,
             ).execute()
         except HttpError as e:
             raise e
 
-    def add_values_request(self, range: str, rows_of_values: list) -> None:
-        """Add values in a range.
+    def add_values_request(self, starting_cell: str, rows_of_values: list[list]) -> None:
+        """Add values starting at the specified cell. The values will
+        be added right and down from the starting cell.
         Adds the request to update_values_request pool.
-        This will update when the next values_batch_update is called.
+        This will update when the next batch_update_values is called.
         
         Args:
-            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
-            rows_of_values (list): List of rows to add to the sheet
+            starting_cell (str): Cell location in the sheet. Ex: Sheet1!A1
+            rows_of_values (list[list]): Rows of values to add
         """
 
-        processed_range: tuple = self.process_range_as_str(range)
-        sheet_name: str = range.split("!")[0]
-        # Rows start at 0 behind the scenes. +1 match spreadsheet starting at 1.
-        next_row: int = (processed_range[2] + 1) + len(rows_of_values)
-
-        # Check if you are adding to the end of the sheet.
-        # next_row will be greater than current_sheet:next_row if adding to the end.
-        if self._current_sheets[sheet_name]["next_row"] < next_row:
-            self._current_sheets[sheet_name]["next_row"] = next_row
-
-        self._update_values_requests.append({"range": range, "values": rows_of_values})
+        self._update_values_requests.append({"range": starting_cell, "values": rows_of_values})
 
     def change_google_sheet_title_request(self, name: str) -> None:
         """Change the name of the google sheet.
@@ -271,7 +258,7 @@ class SheetTool:
             {
                 "updateSheetProperties": {
                     "properties": {
-                        "sheetId": self._current_sheets[new_name]["id"],
+                        "sheetId": self._current_sheets[new_name],
                         "title": f"{new_name}",
                     },
                     "fields": "title",
@@ -288,14 +275,14 @@ class SheetTool:
             name (str): Name of the sheet to add    
         """
 
-        self._current_sheets[name] = {"id": self._sheet_id_runner, "next_row": 0}
+        self._current_sheets[name] = self._sheet_id_runner
         self._sheet_id_runner += 1
 
         self._requests.append(
             {
                 "addSheet": {
                     "properties": {
-                        "sheetId": self._current_sheets[name]["id"],
+                        "sheetId": self._current_sheets[name],
                         "title": f"{name}",
                     }
                 }
@@ -326,7 +313,7 @@ class SheetTool:
             {
                 "updateSheetProperties": {
                     "properties": {
-                        "sheetId": self._current_sheets[name]["id"],
+                        "sheetId": self._current_sheets[name],
                         "gridProperties": new_grid_properties,
                     },
                     "fields": "gridProperties",
@@ -682,7 +669,12 @@ class SheetTool:
         """
 
         range_parts: list = range.split("!")
-        sheet_id: int = self._current_sheets[range_parts[0]]["id"]
+
+        try:
+            sheet_id: int = self._current_sheets[range_parts[0]]
+        except KeyError as e:
+            raise e
+        
         start_pair = list()
         end_pair = list()
         range_pair_values: list = range_parts[1].split(":")
@@ -714,7 +706,7 @@ class SheetTool:
         """
 
         range = range.split(",")
-        sheet_id: int = self._current_sheets[range[0]]["id"]
+        sheet_id: int = self._current_sheets[range[0]]
 
         return (
             sheet_id,

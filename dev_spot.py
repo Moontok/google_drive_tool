@@ -21,7 +21,10 @@ def main():
     tool.setup(g_info_path)
 
     try:
-        tool.create_spreadsheet("Fun", "1YyZ8wZF5yuRUdGyRbR22kqGSNF9RcRk1")
+        tool.set_spreadsheet(general_info["spreadsheet_id"])
+        values = tool.get_values
+
+
     except HttpError as e:
         print(e)
 

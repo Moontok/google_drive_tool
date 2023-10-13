@@ -9,7 +9,7 @@ from googleapiclient.discovery import Resource, build
 from googleapiclient.errors import HttpError
 
 
-class SheetBase:
+class SheetTool:
     """Base class for Google Sheets API. The base class is 
     used to setup the Google Sheets API and authenticate the service account.
     """
@@ -18,6 +18,11 @@ class SheetBase:
         self._service: Optional[Resource] = None
         self._sheet: Optional[Resource] = None
         self._creds: Optional[Credentials] = None
+        self._spreadsheet_id = ""
+        self._current_sheets: dict = {}
+        self._sheet_id_runner: int = 1
+        self._requests = list()
+        self._update_values_requests = list()
 
     def setup(self, service_account_file) -> None:
         """Setup the Google Sheets API
@@ -47,85 +52,6 @@ class SheetBase:
         self._creds = Credentials.from_service_account_file(
             service_account_file, scopes=g_scopes
         )
-
-    def get_spreadsheet_properties(self) -> dict:
-        """Get the properties of a spreadsheet
-
-        Args:
-            spreadsheet_id (str): ID of the spreadsheet
-
-        Returns:
-            dict: Properties of the spreadsheet
-            Keys: "properties", "sheets", "spreadsheetUrl"
-        """
-
-        return self._sheet.get(spreadsheetId=self.spreadsheet_id).execute()
-
-
-class SheetReader(SheetBase):
-    """Class for reading data from a spreadsheet."""
-
-    def __init__(self):
-        super().__init__()
-
-    def get_sheet_values(self, spreadsheet_id: str, range: str) -> list:
-        """Get the values of a spreadsheet using the spreadsheet ID and range.
-        The streadsheet ID can be found in the URL of the spreadsheet.
-
-        Args:
-            spreadsheet_id (str): ID of the spreadsheet
-            range (str): Range of the spreadsheet. Ex: Sheet1!A1:B2 or Sheet1
-
-        Returns:
-            list: Values of the spreadsheet with major dimension of rows
-        """
-
-        results = (
-            self._sheet.values()
-            .get(spreadsheetId=spreadsheet_id, range=range)
-            .execute()
-        )
-
-        return results.get("values", [])
-
-    def get_cell_color(self, spreadsheet_id: str, range: str) -> dict:
-        """Get the color of a cell
-
-        Args:
-            spreadsheet_id (str): ID of the spreadsheet
-            range (str): Range of the spreadsheet. Ex: Sheet1!A1:B2 or Sheet1
-
-        Returns:
-            dict: Color of the cell. Ex: {'red': 0.0, 'green': 0.0, 'blue': 0.0}
-        """
-
-        try:
-            results = self._sheet.get(
-                spreadsheetId=spreadsheet_id,
-                ranges=range,
-                fields="sheets/data/rowData/values/effectiveFormat/backgroundColor",
-            ).execute()
-        except HttpError as e:
-            raise e        
-        
-
-        return results["sheets"][0]["data"][0]["rowData"][0]["values"][0][
-            "effectiveFormat"
-        ]["backgroundColor"]
-
-
-class SheetUpdater(SheetBase):
-    """Class that writes data to a spreadsheet. Can target a current
-    spreadsheet or create a new spreadsheet.
-    """
-
-    def __init__(self):
-        super().__init__()
-        self._spreadsheet_id = ""
-        self._current_sheets: dict = {}
-        self._sheet_id_runner: int = 1
-        self._requests = list()
-        self._update_values_requests = list()
 
     def create_spreadsheet(self, filename: str, folder_id: str) -> None:
         """Create a new spreadsheet
@@ -168,8 +94,21 @@ class SheetUpdater(SheetBase):
             title = sheet["properties"]["title"]
             id = sheet["properties"]["sheetId"]
 
-            self._current_sheets[title] = {"id": id, "next_row": 1}
+            self._current_sheets[title] = {"id": id, "next_row": 1}    
 
+    def get_spreadsheet_properties(self) -> dict:
+        """Get the properties of a spreadsheet.
+        This is not batched and will be executed immediately.
+        
+        Returns:
+            dict: Properties of the spreadsheet
+        """
+        
+        try:
+            return self._sheet.get(spreadsheetId=self._spreadsheet_id).execute()
+        except HttpError as e:
+            raise e
+    
     def get_values(self, range: str) -> Optional[dict]:
         """Returns the values of a specified range.
         This is not batched and will be executed immediately.
@@ -187,6 +126,30 @@ class SheetUpdater(SheetBase):
             .execute()
         )
         return response.get("values")
+
+    def get_cell_color(self, range: str) -> dict:
+        """Get the color of a cell
+
+        Args:
+            range (str): Range of the spreadsheet. Ex: Sheet1!A1:B2 or Sheet1
+
+        Returns:
+            dict: Color of the cell. Ex: {'red': 0.0, 'green': 0.0, 'blue': 0.0}
+        """
+
+        try:
+            results = self._sheet.get(
+                spreadsheetId=self._spreadsheet_id,
+                ranges=range,
+                fields="sheets/data/rowData/values/effectiveFormat/backgroundColor",
+            ).execute()
+        except HttpError as e:
+            raise e        
+        
+
+        return results["sheets"][0]["data"][0]["rowData"][0]["values"][0][
+            "effectiveFormat"
+        ]["backgroundColor"]
 
     def get_next_row(self, sheet_name: str) -> int:
         """Returns the last row number that has been appended to the specified sheet.

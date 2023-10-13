@@ -17,12 +17,13 @@ def main():
     with open(general_info_path) as f:
         general_info = json.load(f)
 
-    tool = gdt.SheetUpdater()
+    tool = gdt.SheetTool()
     tool.setup(g_info_path)
 
     try:
-        tool.set_spreadsheet(general_info["spreadsheet_id"])
-        values = tool.get_values
+        tool.set_spreadsheet(general_info["sheet_id"])
+        values = tool.get_values("Sheet1!A1:B3")
+        print(values)
 
 
     except HttpError as e:

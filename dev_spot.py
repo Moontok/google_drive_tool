@@ -4,6 +4,8 @@
 import os
 import json
 
+from googleapiclient.errors import HttpError
+
 import google_drive_tool as gdt
 
 
@@ -15,11 +17,13 @@ def main():
     with open(general_info_path) as f:
         general_info = json.load(f)
 
-    tool = gdt.SheetReader()
+    tool = gdt.SheetUpdater()
     tool.setup(g_info_path)
-    values = tool.get_sheet_values(general_info["sheet_id"], "Sheet1!A")
 
-    print(values)
+    try:
+        tool.create_spreadsheet("Fun", "1YyZ8wZF5yuRUdGyRbR22kqGSNF9RcRk1")
+    except HttpError as e:
+        print(e)
 
 
 def json_pretty_dump(data: dict, file_name: str) -> None:

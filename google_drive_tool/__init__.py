@@ -69,7 +69,8 @@ class SheetReader(SheetBase):
         super().__init__()
 
     def get_sheet_values(self, spreadsheet_id: str, range: str) -> list:
-        """Get the values of a spreadsheet
+        """Get the values of a spreadsheet using the spreadsheet ID and range.
+        The streadsheet ID can be found in the URL of the spreadsheet.
 
         Args:
             spreadsheet_id (str): ID of the spreadsheet
@@ -80,7 +81,9 @@ class SheetReader(SheetBase):
         """
 
         results = (
-            self._sheet.values().get(spreadsheetId=spreadsheet_id, range=range).execute()
+            self._sheet.values()
+            .get(spreadsheetId=spreadsheet_id, range=range)
+            .execute()
         )
 
         return results.get("values", [])
@@ -96,11 +99,15 @@ class SheetReader(SheetBase):
             dict: Color of the cell. Ex: {'red': 0.0, 'green': 0.0, 'blue': 0.0}
         """
 
-        results = self._sheet.get(
-            spreadsheetId=spreadsheet_id,
-            ranges=range,
-            fields="sheets/data/rowData/values/effectiveFormat/backgroundColor",
-        ).execute()
+        try:
+            results = self._sheet.get(
+                spreadsheetId=spreadsheet_id,
+                ranges=range,
+                fields="sheets/data/rowData/values/effectiveFormat/backgroundColor",
+            ).execute()
+        except HttpError as e:
+            raise e        
+        
 
         return results["sheets"][0]["data"][0]["rowData"][0]["values"][0][
             "effectiveFormat"
@@ -114,13 +121,34 @@ class SheetUpdater(SheetBase):
 
     def __init__(self):
         super().__init__()
-        self._filename = ""
         self._spreadsheet_id = ""
-        self._folder_id = ""
         self._current_sheets: dict = {}
         self._sheet_id_runner: int = 1
         self._requests = list()
         self._update_values_requests = list()
+
+    def create_spreadsheet(self, filename: str, folder_id: str) -> None:
+        """Create a new spreadsheet
+
+        Args:
+            title (str): Title of the spreadsheet
+            folder_id (str): ID of the folder to place the spreadsheet in
+        """
+
+        try:
+            drive_service = build("drive", "v3", credentials=self._creds)
+
+            file_metadata = {
+                "name": filename,
+                "parents": [folder_id],
+                "mimeType": "application/vnd.google-apps.spreadsheet",
+            }
+
+            response = drive_service.files().create(body=file_metadata).execute()
+            self._spreadsheet_id = response["id"]
+            self._current_sheets = {"Sheet1": {"id": 0, "next_row": 1}}
+        except HttpError as e:
+            raise e
 
     def set_spreadsheet(self, spreadsheet_id: str) -> None:
         """Set the current spreadsheet
@@ -142,31 +170,12 @@ class SheetUpdater(SheetBase):
 
             self._current_sheets[title] = {"id": id, "next_row": 1}
 
-    def create_spreadsheet(self, filename: str, folder_id: str) -> None:
-        """Create a new spreadsheet
-
-        Args:
-            title (str): Title of the spreadsheet
-            folder_id (str): ID of the folder to place the spreadsheet in
-        """
-
-        drive_service = build("drive", "v3", credentials=self._creds)
-
-        file_metadata = {
-            "name": filename,
-            "parents": [folder_id],
-            "mimeType": "application/vnd.google-apps.spreadsheet",
-        }
-
-        response = drive_service.files().create(body=file_metadata).execute()
-        self._spreadsheet_id = response["id"]
-        self._current_sheets = {"Sheet1": {"id": 0, "next_row": 1}}
-
-    def get_values_by_range(self, cell_range: str) -> Optional[dict]:
+    def get_values(self, range: str) -> Optional[dict]:
         """Returns the values of a specified range.
+        This is not batched and will be executed immediately.
         
         Args:
-            cell_range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
+            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
             
         Returns:
             Optional[dict]: Values of the specified range
@@ -174,7 +183,7 @@ class SheetUpdater(SheetBase):
 
         response = (
             self._sheet.values()
-            .get(spreadsheetId=self._spreadsheet_id, range=cell_range)
+            .get(spreadsheetId=self._spreadsheet_id, range=range)
             .execute()
         )
         return response.get("values")
@@ -190,16 +199,6 @@ class SheetUpdater(SheetBase):
         """
 
         return self._current_sheets[sheet_name]["next_row"]
-
-    def set_file_and_folder_info(self, file_and_folder_info: tuple) -> None:
-        """Set the filename and folder information for the sheet export.
-        
-        Args:
-            file_and_folder_info (tuple): Filename and folder ID. Ex: ("filename", "folder_id")
-        """
-
-        self._filename = file_and_folder_info[0]
-        self._folder_id = file_and_folder_info[1]
 
     def values_batch_update(self) -> None:
         """Batch updates all current value requests.
@@ -252,18 +251,18 @@ class SheetUpdater(SheetBase):
         except HttpError as e:
             raise e
 
-    def add_values_request(self, cell_range: str, rows_of_values: list) -> None:
+    def add_values_request(self, range: str, rows_of_values: list) -> None:
         """Add values in a range.
         Adds the request to update_values_request pool.
         This will update when the next values_batch_update is called.
         
         Args:
-            cell_range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
+            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
             rows_of_values (list): List of rows to add to the sheet
         """
 
-        processed_range: tuple = self.process_range(cell_range)
-        sheet_name: str = cell_range.split("!")[0]
+        processed_range: tuple = self.process_range_as_str(range)
+        sheet_name: str = range.split("!")[0]
         # Rows start at 0 behind the scenes. +1 match spreadsheet starting at 1.
         next_row: int = (processed_range[2] + 1) + len(rows_of_values)
 
@@ -272,7 +271,7 @@ class SheetUpdater(SheetBase):
         if self._current_sheets[sheet_name]["next_row"] < next_row:
             self._current_sheets[sheet_name]["next_row"] = next_row
 
-        self._update_values_requests.append({"range": cell_range, "values": rows_of_values})
+        self._update_values_requests.append({"range": range, "values": rows_of_values})
 
     def change_google_sheet_title_request(self, name: str) -> None:
         """Change the name of the google sheet.
@@ -372,7 +371,7 @@ class SheetUpdater(SheetBase):
             }
         )
 
-    def resize_request(self, cell_range: str, size: int, range_as_ints=False) -> None:
+    def resize_request(self, range: str, size: int) -> None:
         """Resize a column or row by specified number of pixels.
         Adds the request to requests pool.
         This will update when the next batch_update is called.
@@ -384,15 +383,11 @@ class SheetUpdater(SheetBase):
                 - Ex. "Sheet1!1:1" will resize row 1.
 
         Args:
-            cell_range (str): Range of the sheet. Ex. "Sheet1!A:A" or "Sheet1!1:1"
+            range (str): Range of the sheet. Ex. "Sheet1!A:A" or "Sheet1!1:1"
             size (int): Size to resize the column or row.
-            range_as_ints (bool, optional): Process the range as integers. Defaults to False.
         """
 
-        if range_as_ints:
-            processed_range = self.process_range_as_ints(cell_range)
-        else:
-            processed_range = self.process_range(cell_range)
+        processed_range: tuple = self.process_range_as_str(range)
 
         dimension: str = ""
         start_index: int = 0
@@ -423,11 +418,10 @@ class SheetUpdater(SheetBase):
 
     def align_and_wrap_cells_range_request(
         self,
-        cell_range: str,
+        range: str,
         horizontal: str = "LEFT",
         vertical: str = "BOTTOM",
-        wrapping: str = "CLIP",
-        range_as_ints=False,
+        wrapping: str = "CLIP"
     ) -> None:
         """Align and wrap cells in the provided range based on alignment provided.
         Adds the request to requests pool.
@@ -442,17 +436,13 @@ class SheetUpdater(SheetBase):
             - WRAP
 
         Args:
-            cell_range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
+            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
             horizontal (str, optional): Horizontal alignment. Defaults to "LEFT".
             vertical (str, optional): Vertical alignment. Defaults to "BOTTOM".
             wrapping (str, optional): Wrapping strategy. Defaults to "CLIP".
-            range_as_ints (bool, optional): Process the range as integers. Defaults to False.
         """
 
-        if range_as_ints:
-            processed_range = self.process_range_as_ints(cell_range)
-        else:
-            processed_range = self.process_range(cell_range)
+        processed_range: tuple = self.process_range_as_str(range)
 
         format_style = {
             "repeatCell": {
@@ -475,9 +465,7 @@ class SheetUpdater(SheetBase):
         }
         self._requests.append(format_style)
 
-    def merge_cells_range_request(
-        self, cell_range: str, merge_type: str = "MERGE_ALL", range_as_ints=False
-    ) -> None:
+    def merge_cells_range_request(self, range: str, merge_type: str = "MERGE_ALL") -> None:
         """Merge cells in the provided range based on merge type.
         Adds the request to requests pool.
         This will update when the next batch_update is called.
@@ -488,15 +476,11 @@ class SheetUpdater(SheetBase):
             - MERGE_ROWS
 
         Args:
-            cell_range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
+            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
             merge_type (str, optional): Type of merge. Defaults to "MERGE_ALL".
-            range_as_ints (bool, optional): Process the range as integers. Defaults to False.
         """
 
-        if range_as_ints:
-            processed_range = self.process_range_as_ints(cell_range)
-        else:
-            processed_range = self.process_range(cell_range)
+        processed_range: tuple = self.process_range_as_str(range)
 
         format_style = {
             "mergeCells": {
@@ -514,22 +498,21 @@ class SheetUpdater(SheetBase):
 
     def format_font_range_request(
         self,
-        cell_range: str,
+        range: str,
         font_family: str = "Arial",
         font_size: int = 10,
         bold: bool = False,
         italic: bool = False,
         strikethrough: bool = False,
         underline: bool = False,
-        text_color: tuple = (0, 0, 0),
-        range_as_ints=False,
+        text_color: tuple = (0, 0, 0)
     ) -> None:
         """Set the font for a range of cells.
         Adds the request to requests pool.
         This will update when the next batch_update is called.
         
         Args:
-            cell_range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
+            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
             font_family (str, optional): Font family. Defaults to "Arial".
             font_size (int, optional): Font size. Defaults to 10.
             bold (bool, optional): Bold text. Defaults to False.
@@ -537,13 +520,9 @@ class SheetUpdater(SheetBase):
             strikethrough (bool, optional): Strikethrough text. Defaults to False.
             underline (bool, optional): Underline text. Defaults to False.
             text_color (tuple, optional): Color of the text (Red, Green, Blue). Defaults to (0, 0, 0).
-            range_as_ints (bool, optional): Process the range as integers. Defaults to False.
         """
 
-        if range_as_ints:
-            processed_range = self.process_range_as_ints(cell_range)
-        else:
-            processed_range = self.process_range(cell_range)
+        processed_range: tuple = self.process_range_as_str(range)
 
         format_style = {
             "repeatCell": {
@@ -576,23 +555,17 @@ class SheetUpdater(SheetBase):
         }
         self._requests.append(format_style)
 
-    def fill_range_request(
-        self, cell_range: str, fill_color: tuple = (1, 1, 1), range_as_ints=False
-    ) -> None:
+    def fill_range_request(self, range: str, fill_color: tuple = (1, 1, 1)) -> None:
         """Set the background fill for a range of cells.
         Adds the request to requests pool.
         This will update when the next batch_update is called.
 
         Args:
-            cell_range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
+            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
             fill_color (tuple, optional): Color of the fill (Red, Green, Blue). Defaults to (1, 1, 1).
-            range_as_ints (bool, optional): Process the range as integers. Defaults to False.
         """
 
-        if range_as_ints:
-            processed_range = self.process_range_as_ints(cell_range)
-        else:
-            processed_range = self.process_range(cell_range)
+        processed_range: tuple = self.process_range_as_str(range)
 
         format_style = {
             "repeatCell": {
@@ -619,10 +592,9 @@ class SheetUpdater(SheetBase):
 
     def set_outer_border_range_request(
         self,
-        cell_range: str,
+        range: str,
         type: str = "SOLID",
         color: tuple = (0, 0, 0),
-        range_as_ints=False,
     ) -> None:
         """Set the outer border for a range of cells.
         Adds the request to requests pool.
@@ -638,16 +610,12 @@ class SheetUpdater(SheetBase):
             - DOUBLE
 
         Args:
-            cell_range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
+            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
             type (str, optional): Type of border. Defaults to "SOLID".
             color (tuple, optional): Color of the border. Defaults to (0, 0, 0).
-            range_as_ints (bool, optional): Process the range as integers. Defaults to False.
         """
 
-        if range_as_ints:
-            processed_range = self.process_range_as_ints(cell_range)
-        else:
-            processed_range = self.process_range(cell_range)
+        processed_range: tuple = self.process_range_as_str(range)
 
         border_format = {
             "updateBorders": {
@@ -680,10 +648,9 @@ class SheetUpdater(SheetBase):
 
     def set_bottom_border_range_request(
         self,
-        cell_range: str,
+        range: str,
         type: str = "SOLID",
-        color: tuple = (0, 0, 0),
-        range_as_ints=False,
+        color: tuple = (0, 0, 0)
     ) -> None:
         """Set the bottom border for a range of cells.
         Adds the request to requests pool.
@@ -699,16 +666,12 @@ class SheetUpdater(SheetBase):
             - DOUBLE
 
         Args:
-            cell_range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
+            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
             type (str, optional): Type of border. Defaults to "SOLID".
             color (tuple, optional): Color of the border. Defaults to (0, 0, 0).
-            range_as_ints (bool, optional): Process the range as integers. Defaults to False.
         """
 
-        if range_as_ints:
-            processed_range = self.process_range_as_ints(cell_range)
-        else:
-            processed_range = self.process_range(cell_range)
+        processed_range: tuple = self.process_range_as_str(range)
 
         border_format = {
             "updateBorders": {
@@ -727,20 +690,35 @@ class SheetUpdater(SheetBase):
         }
         self._requests.append(border_format)
 
-    def process_range(self, cell_range: str) -> tuple:
+    def process_range(self, range: str) -> tuple:
+        """Process the range as integers or strings.
+        
+        Args:
+            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1 or 1,2,3,4
+            
+        Returns:
+            tuple: Processed range
+        """
+
+        if "," in range:
+            return self.process_range_as_ints(range)
+        else:
+            return self.process_range_as_str(range)
+
+    def process_range_as_str(self, range: str) -> tuple:
         """
         Process the range into sheet_id and starting and ending cell.
         Adds the request to requests pool.
         This will update when the next batch_update is called.
 
         Args:
-            cell_range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
+            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
 
         Returns:
             tuple: Processed range. Ex: (1, 0, 0, 1, 1)
         """
 
-        range_parts: list = cell_range.split("!")
+        range_parts: list = range.split("!")
         sheet_id: int = self._current_sheets[range_parts[0]]["id"]
         start_pair = list()
         end_pair = list()
@@ -761,26 +739,26 @@ class SheetUpdater(SheetBase):
             end_pair[1],
         )
 
-    def process_range_as_ints(self, cell_range: str) -> tuple:
+    def process_range_as_ints(self, range: str) -> tuple:
         """Process the range as integers. Some parts of the API require
         the range to be integers instead of letters and numbers.
         
         Args:
-            cell_range (str): Range of the sheet. Ex: "1,2,3,4"
+            range (str): Range of the sheet. Ex: "1,2,3,4"
         
         Returns:
             tuple: Processed range as integers. Ex: (1,2,3,4,5)
         """
 
-        cell_range = cell_range.split(",")
-        sheet_id: int = self._current_sheets[cell_range[0]]["id"]
+        range = range.split(",")
+        sheet_id: int = self._current_sheets[range[0]]["id"]
 
         return (
             sheet_id,
-            int(cell_range[1]),
-            int(cell_range[2]),
-            int(cell_range[3]),
-            int(cell_range[4]),
+            int(range[1]),
+            int(range[2]),
+            int(range[3]),
+            int(range[4]),
         )
 
 ############ LOOK INTO THIS ###############################
@@ -821,7 +799,7 @@ class SheetUpdater(SheetBase):
         
         return [base_columns[alpha_chars], int(num_chars)]
 
-    def clear_sheet_values(self, cell_range: str) -> None:
+    def clear_sheet_values(self, range: str) -> None:
         """Clear the values of a sheet.
         This is not batched and will be executed immediately.
 
@@ -831,7 +809,7 @@ class SheetUpdater(SheetBase):
 
         try:
             self._sheet.values().clear(
-                spreadsheetId=self._spreadsheet_id, range=cell_range
+                spreadsheetId=self._spreadsheet_id, range=range
             ).execute()
         except HttpError as e:
             raise e
@@ -850,9 +828,7 @@ class SheetUpdater(SheetBase):
         last_column = sheet_props["sheets"][0]["properties"]["gridProperties"][
             "columnCount"
         ]
-        self.fill_range_request(
-            f"{sheet_name},0,0,{last_column},{last_row}", (1, 1, 1), range_as_ints=True
-        )
+        self.fill_range_request(f"{sheet_name},0,0,{last_column},{last_row}", (1, 1, 1))
 
     def reset_sheet_font(self, sheet_name: str) -> None:
         """Reset the font of a sheet by calling format_font_range_request and setting to default.
@@ -868,10 +844,7 @@ class SheetUpdater(SheetBase):
         last_column = sheet_props["sheets"][0]["properties"]["gridProperties"][
             "columnCount"
         ]
-        self.format_font_range_request(
-            f"{sheet_name},0,0,{last_column},{last_row}", range_as_ints=True
-        )
-
+        self.format_font_range_request( f"{sheet_name},0,0,{last_column},{last_row}")
 
 if __name__ == "__main__":
     print("This is a module...")

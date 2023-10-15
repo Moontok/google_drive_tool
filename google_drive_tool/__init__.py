@@ -494,9 +494,7 @@ class SheetTool:
         }
         self.__requests.append(format_style)
 
-    def merge_cells_request(
-        self, range: str, merge_type: str = "MERGE_ALL"
-    ) -> None:
+    def merge_cells_request(self, range: str, merge_type: str = "MERGE_ALL") -> None:
         """Merge cells in the provided range based on merge type.
         Adds the request to requests pool.
         This will update when the next batch_update is called.
@@ -807,7 +805,7 @@ class SheetTool:
         for letter in pair:
             if letter.isalpha():
                 col *= 26
-                col += ord(letter) - ord('A') + 1
+                col += ord(letter) - ord("A") + 1
             elif letter.isdigit():
                 row_digits += letter
         col -= 1 if col > 0 else 0

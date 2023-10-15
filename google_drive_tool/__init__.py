@@ -10,19 +10,19 @@ from googleapiclient.errors import HttpError
 
 
 class SheetTool:
-    """Base class for Google Sheets API. The base class is 
+    """Base class for Google Sheets API. The base class is
     used to setup the Google Sheets API and authenticate the service account.
     """
 
     def __init__(self):
-        self._service: Optional[Resource] = None
-        self._sheet: Optional[Resource] = None
-        self._creds: Optional[Credentials] = None
-        self._spreadsheet_id = ""
-        self._current_sheets: dict = {}
-        self._sheet_id_runner: int = 1
-        self._requests = list()
-        self._update_values_requests = list()
+        self.__service: Optional[Resource] = None
+        self.__sheet: Optional[Resource] = None
+        self.__creds: Optional[Credentials] = None
+        self.__spreadsheet_id = ""
+        self.__current_sheets: dict = {}
+        self.__sheet_id_runner: int = 1
+        self.__requests = list()
+        self.__update_values_requests = list()
 
     def setup(self, service_account_file) -> None:
         """Setup the Google Sheets API
@@ -32,14 +32,14 @@ class SheetTool:
         """
 
         try:
-            self.authenticate(service_account_file)
-            self._service = build("sheets", "v4", credentials=self._creds)
+            self._authenticate(service_account_file)
+            self.__service = build("sheets", "v4", credentials=self.__creds)
         except HttpError as e:
             raise e
-        
-        self._sheet = self._service.spreadsheets()
 
-    def authenticate(self, service_account_file: str) -> Credentials:
+        self.__sheet = self.__service.spreadsheets()
+
+    def _authenticate(self, service_account_file: str) -> Credentials:
         """Authenticate the Google Sheets API
 
         Args:
@@ -54,7 +54,7 @@ class SheetTool:
             "https://www.googleapis.com/auth/drive",
         ]
         try:
-            self._creds = Credentials.from_service_account_file(
+            self.__creds = Credentials.from_service_account_file(
                 service_account_file, scopes=g_scopes
             )
         except HttpError as e:
@@ -69,7 +69,7 @@ class SheetTool:
         """
 
         try:
-            drive_service = build("drive", "v3", credentials=self._creds)
+            drive_service = build("drive", "v3", credentials=self.__creds)
 
             file_metadata = {
                 "name": filename,
@@ -78,8 +78,8 @@ class SheetTool:
             }
 
             response = drive_service.files().create(body=file_metadata).execute()
-            self._spreadsheet_id = response["id"]
-            self._current_sheets = {"Sheet1": 0}
+            self.__spreadsheet_id = response["id"]
+            self.__current_sheets = {"Sheet1": 0}
         except HttpError as e:
             raise e
 
@@ -90,10 +90,10 @@ class SheetTool:
             spreadsheet_id (str): ID of the spreadsheet
         """
 
-        self._spreadsheet_id = spreadsheet_id
+        self.__spreadsheet_id = spreadsheet_id
 
         # Update the current sheets from the sheet properties.
-        self._current_sheets.clear()
+        self.__current_sheets.clear()
 
         sheets_properties = self.get_spreadsheet_properties()["sheets"]
 
@@ -101,35 +101,35 @@ class SheetTool:
             title = sheet["properties"]["title"]
             id = sheet["properties"]["sheetId"]
 
-            self._current_sheets[title] = id   
+            self.__current_sheets[title] = id
 
     def get_spreadsheet_properties(self) -> dict:
         """Get the properties of a spreadsheet.
         This is not batched and will be executed immediately.
-        
+
         Returns:
             dict: Properties of the spreadsheet
         """
-        
+
         try:
-            return self._sheet.get(spreadsheetId=self._spreadsheet_id).execute()
+            return self.__sheet.get(spreadsheetId=self.__spreadsheet_id).execute()
         except HttpError as e:
             raise e
-    
+
     def get_values(self, range: str) -> Optional[dict]:
         """Returns the values of a specified range.
         This is not batched and will be executed immediately.
-        
+
         Args:
             range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
-            
+
         Returns:
             Optional[dict]: Values of the specified range
         """
 
         response = (
-            self._sheet.values()
-            .get(spreadsheetId=self._spreadsheet_id, range=range)
+            self.__sheet.values()
+            .get(spreadsheetId=self.__spreadsheet_id, range=range)
             .execute()
         )
         return response.get("values")
@@ -145,18 +145,86 @@ class SheetTool:
         """
 
         try:
-            results = self._sheet.get(
-                spreadsheetId=self._spreadsheet_id,
+            results = self.__sheet.get(
+                spreadsheetId=self.__spreadsheet_id,
                 ranges=cell,
                 fields="sheets/data/rowData/values/effectiveFormat/backgroundColor",
             ).execute()
         except HttpError as e:
-            raise e        
-        
+            raise e
 
         return results["sheets"][0]["data"][0]["rowData"][0]["values"][0][
             "effectiveFormat"
         ]["backgroundColor"]
+
+    def clear_sheet_values(self, range: str) -> None:
+        """Clear the values of a sheet.
+        This is not batched and will be executed immediately.
+
+        Args:
+            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
+        """
+
+        try:
+            self.__sheet.values().clear(
+                spreadsheetId=self.__spreadsheet_id, range=range
+            ).execute()
+        except HttpError as e:
+            raise e
+
+    def clear_sheet_colors(self, sheet_name: str) -> None:
+        """Clear the color of a sheet by calling fill_range_request and setting to white.
+        Adds the request to requests pool.
+        This will update when the next batch_update is called.
+
+        Args:
+            sheet_name (str): Name of the sheet to clear
+        """
+
+        last_row, last_column = self._get_last_row_and_column()
+        self.fill_range_request(f"{sheet_name},0,0,{last_column},{last_row}", (1, 1, 1))
+
+    def reset_sheet_font(self, sheet_name: str) -> None:
+        """Reset the font of a sheet by calling format_font_range_request and setting to default.
+        Adds the request to requests pool.
+        This will update when the next batch_update is called.
+
+        Args:
+            sheet_name (str): Name of the sheet to reset
+        """
+
+        last_row, last_column = self._get_last_row_and_column()
+        self.format_font_range_request(f"{sheet_name},0,0,{last_column},{last_row}")
+
+    def _get_last_row_and_column(self) -> tuple:
+        """Get the last row and column of the current sheet.
+
+        Returns:
+            tuple: Last row and column of the current sheet
+        """
+
+        sheet_props: dict = self.get_spreadsheet_properties()
+        last_row = sheet_props["sheets"][0]["properties"]["gridProperties"]["rowCount"]
+        last_column = sheet_props["sheets"][0]["properties"]["gridProperties"][
+            "columnCount"
+        ]
+
+        return (last_row, last_column)
+
+    def batch_update(self) -> None:
+        """Batch updates all current requests.
+        This will execute all requests in the order they were added
+        and then clear the requests pool.
+        """
+
+        try:
+            body: dict = {"requests": self.__requests}
+            self.__sheet.batchUpdate(
+                spreadsheetId=self.__spreadsheet_id, body=body
+            ).execute()
+            self.__requests.clear()
+        except HttpError as e:
+            raise e
 
     def batch_update_values(self) -> None:
         """Batch updates all current value requests.
@@ -167,25 +235,12 @@ class SheetTool:
         try:
             values_body = {
                 "valueInputOption": "USER_ENTERED",
-                "data": self._update_values_requests,
+                "data": self.__update_values_requests,
             }
-            self._sheet.values().batchUpdate(
-                spreadsheetId=self._spreadsheet_id, body=values_body
+            self.__sheet.values().batchUpdate(
+                spreadsheetId=self.__spreadsheet_id, body=values_body
             ).execute()
-            self._update_values_requests.clear()
-        except HttpError as e:
-            raise e
-
-    def batch_update(self) -> None:
-        """Batch updates all current requests.
-        This will execute all requests in the order they were added
-        and then clear the requests pool.
-        """
-
-        try:
-            body: dict = {"requests": self._requests}
-            self._sheet.batchUpdate(spreadsheetId=self._spreadsheet_id, body=body).execute()
-            self._requests.clear()
+            self.__update_values_requests.clear()
         except HttpError as e:
             raise e
 
@@ -193,7 +248,7 @@ class SheetTool:
         """Append a list of values in the next empty cell in that column
         starting at the specified cell and extending down and to the right.
         This is not batched and will be executed immediately.
-        
+
         Args:
             values (list): Values to append
             cell (str, optional): Cell location in the sheet. Defaults to "A1".
@@ -201,8 +256,8 @@ class SheetTool:
 
         try:
             body: dict = {"values": value}
-            self._sheet.values().append(
-                spreadsheetId=self._spreadsheet_id,
+            self.__sheet.values().append(
+                spreadsheetId=self.__spreadsheet_id,
                 range=cell,
                 valueInputOption="USER_ENTERED",
                 body=body,
@@ -210,20 +265,24 @@ class SheetTool:
         except HttpError as e:
             raise e
 
-    def insert_values_request(self, starting_cell: str, rows_of_values: list[list]) -> None:
+    def insert_values_request(
+        self, starting_cell: str, rows_of_values: list[list]
+    ) -> None:
         """Insert values starting at the specified cell. The values will
         be added right and down from the starting cell. Can't select a starting_cell
         that is not located on the sheet. However, rows will be added if the starting_cell
         is located on the sheet but the rows_of_values extend past the sheet.
         Adds the request to update_values_request pool.
         This will update when the next batch_update_values is called.
-        
+
         Args:
             starting_cell (str): Cell location in the sheet. Ex: Sheet1!A1
             rows_of_values (list[list]): Rows of values to add
         """
 
-        self._update_values_requests.append({"range": starting_cell, "values": rows_of_values})
+        self.__update_values_requests.append(
+            {"range": starting_cell, "values": rows_of_values}
+        )
 
     def change_title_request(self, name: str) -> None:
         """Change the title of the Google spreadsheet.
@@ -234,7 +293,7 @@ class SheetTool:
             name (str): New name of the sheet
         """
 
-        self._requests.append(
+        self.__requests.append(
             {
                 "updateSpreadsheetProperties": {
                     "properties": {"title": f"{name}"},
@@ -247,20 +306,20 @@ class SheetTool:
         """Change the name of the specified sheet.
         Adds the request to requests pool.
         This will update when the next batch_update is called.
-        
+
         Args:
             old_name (str): Name of the sheet to change
             new_name (str): New name of the sheet
         """
 
-        self._current_sheets[new_name] = self._current_sheets[old_name]
-        del self._current_sheets[old_name]
+        self.__current_sheets[new_name] = self.__current_sheets[old_name]
+        del self.__current_sheets[old_name]
 
-        self._requests.append(
+        self.__requests.append(
             {
                 "updateSheetProperties": {
                     "properties": {
-                        "sheetId": self._current_sheets[new_name],
+                        "sheetId": self.__current_sheets[new_name],
                         "title": f"{new_name}",
                     },
                     "fields": "title",
@@ -272,19 +331,19 @@ class SheetTool:
         """Add a new sheet request to the Google Sheet.
         Adds the request to requests pool.
         This will update when the next batch_update is called.
-        
+
         Args:
-            name (str): Name of the sheet to add    
+            name (str): Name of the sheet to add
         """
 
-        self._current_sheets[name] = self._sheet_id_runner
-        self._sheet_id_runner += 1
+        self.__current_sheets[name] = self.__sheet_id_runner
+        self.__sheet_id_runner += 1
 
-        self._requests.append(
+        self.__requests.append(
             {
                 "addSheet": {
                     "properties": {
-                        "sheetId": self._current_sheets[name],
+                        "sheetId": self.__current_sheets[name],
                         "title": f"{name}",
                     }
                 }
@@ -292,12 +351,16 @@ class SheetTool:
         )
 
     def set_sheet_grid_properties_request(
-        self, name: str, number_of_rows: int = 1000, number_of_columns: int = 26, hideGridlines: bool=False
+        self,
+        name: str,
+        number_of_rows: int = 1000,
+        number_of_columns: int = 26,
+        hideGridlines: bool = False,
     ) -> None:
         """Changes the rows and columns for a sheet.
         Adds the request to requests pool.
         This will update when the next batch_update is called.
-        
+
         Args:
             name (str): Name of the sheet to change
             number_of_rows (int, optional): Number of rows to set. Defaults to 1000.
@@ -311,11 +374,11 @@ class SheetTool:
             "hideGridlines": hideGridlines,
         }
 
-        self._requests.append(
+        self.__requests.append(
             {
                 "updateSheetProperties": {
                     "properties": {
-                        "sheetId": self._current_sheets[name],
+                        "sheetId": self.__current_sheets[name],
                         "gridProperties": new_grid_properties,
                     },
                     "fields": "gridProperties",
@@ -339,7 +402,7 @@ class SheetTool:
             size (int): Size to resize the column or row.
         """
 
-        processed_range: tuple = self.process_range(range)
+        processed_range: tuple = self._process_range(range)
 
         dimension: str = ""
         start_index: int = 0
@@ -366,14 +429,14 @@ class SheetTool:
                 },
             }
         }
-        self._requests.append(format_style)
+        self.__requests.append(format_style)
 
     def align_and_wrap_cells_range_request(
         self,
         range: str,
         horizontal: str = "LEFT",
         vertical: str = "BOTTOM",
-        wrapping: str = "CLIP"
+        wrapping: str = "CLIP",
     ) -> None:
         """Align and wrap cells in the provided range based on alignment provided.
         Adds the request to requests pool.
@@ -382,6 +445,7 @@ class SheetTool:
         Alignment:
             - Horizontal: LEFT, CENTER, RIGHT
             - Vertical: TOP, MIDDLE, BOTTOM
+
         Wrapping:
             - OVERFLOW_CELL
             - CLIP
@@ -394,17 +458,11 @@ class SheetTool:
             wrapping (str, optional): Wrapping strategy. Defaults to "CLIP".
         """
 
-        processed_range: tuple = self.process_range(range)
+        processed_range: tuple = self._process_range(range)
 
         format_style = {
             "repeatCell": {
-                "range": {
-                    "sheetId": processed_range[0],
-                    "startColumnIndex": processed_range[1],
-                    "startRowIndex": processed_range[2],
-                    "endColumnIndex": processed_range[3],
-                    "endRowIndex": processed_range[4],
-                },
+                "range": self._format_range_json(processed_range),
                 "cell": {
                     "userEnteredFormat": {
                         "horizontalAlignment": horizontal,
@@ -415,9 +473,11 @@ class SheetTool:
                 "fields": "userEnteredFormat(horizontalAlignment, verticalAlignment, wrapStrategy)",
             }
         }
-        self._requests.append(format_style)
+        self.__requests.append(format_style)
 
-    def merge_cells_range_request(self, range: str, merge_type: str = "MERGE_ALL") -> None:
+    def merge_cells_range_request(
+        self, range: str, merge_type: str = "MERGE_ALL"
+    ) -> None:
         """Merge cells in the provided range based on merge type.
         Adds the request to requests pool.
         This will update when the next batch_update is called.
@@ -432,21 +492,15 @@ class SheetTool:
             merge_type (str, optional): Type of merge. Defaults to "MERGE_ALL".
         """
 
-        processed_range: tuple = self.process_range(range)
+        processed_range: tuple = self._process_range(range)
 
         format_style = {
             "mergeCells": {
-                "range": {
-                    "sheetId": processed_range[0],
-                    "startColumnIndex": processed_range[1],
-                    "startRowIndex": processed_range[2],
-                    "endColumnIndex": processed_range[3],
-                    "endRowIndex": processed_range[4],
-                },
+                "range": self._format_range_json(processed_range),
                 "mergeType": merge_type,
             }
         }
-        self._requests.append(format_style)
+        self.__requests.append(format_style)
 
     def format_font_range_request(
         self,
@@ -457,12 +511,12 @@ class SheetTool:
         italic: bool = False,
         strikethrough: bool = False,
         underline: bool = False,
-        text_color: tuple = (0, 0, 0)
+        text_color: tuple = (0, 0, 0),
     ) -> None:
         """Set the font for a range of cells.
         Adds the request to requests pool.
         This will update when the next batch_update is called.
-        
+
         Args:
             range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
             font_family (str, optional): Font family. Defaults to "Arial".
@@ -474,25 +528,15 @@ class SheetTool:
             text_color (tuple, optional): Color of the text (Red, Green, Blue). Defaults to (0, 0, 0).
         """
 
-        processed_range: tuple = self.process_range(range)
+        processed_range: tuple = self._process_range(range)
 
         format_style = {
             "repeatCell": {
-                "range": {
-                    "sheetId": processed_range[0],
-                    "startColumnIndex": processed_range[1],
-                    "startRowIndex": processed_range[2],
-                    "endColumnIndex": processed_range[3],
-                    "endRowIndex": processed_range[4],
-                },
+                "range": self._format_range_json(processed_range),
                 "cell": {
                     "userEnteredFormat": {
                         "textFormat": {
-                            "foregroundColor": {
-                                "red": text_color[0],
-                                "green": text_color[1],
-                                "blue": text_color[2],
-                            },
+                            "foregroundColor": self._format_color_json(text_color),
                             "font_family": font_family,
                             "fontSize": font_size,
                             "bold": bold,
@@ -505,7 +549,7 @@ class SheetTool:
                 "fields": "userEnteredFormat(textFormat)",
             }
         }
-        self._requests.append(format_style)
+        self.__requests.append(format_style)
 
     def fill_range_request(self, range: str, fill_color: tuple = (1, 1, 1)) -> None:
         """Set the background fill for a range of cells.
@@ -517,30 +561,36 @@ class SheetTool:
             fill_color (tuple, optional): Color of the fill (Red, Green, Blue). Defaults to (1, 1, 1).
         """
 
-        processed_range: tuple = self.process_range(range)
+        processed_range: tuple = self._process_range(range)
 
         format_style = {
             "repeatCell": {
-                "range": {
-                    "sheetId": processed_range[0],
-                    "startColumnIndex": processed_range[1],
-                    "startRowIndex": processed_range[2],
-                    "endColumnIndex": processed_range[3],
-                    "endRowIndex": processed_range[4],
-                },
+                "range": self._format_range_json(processed_range),
                 "cell": {
                     "userEnteredFormat": {
-                        "backgroundColor": {
-                            "red": fill_color[0],
-                            "green": fill_color[1],
-                            "blue": fill_color[2],
-                        }
+                        "backgroundColor": self._format_color_json(fill_color)
                     }
                 },
                 "fields": "userEnteredFormat(backgroundColor)",
             }
         }
-        self._requests.append(format_style)
+        self.__requests.append(format_style)
+
+    def _format_color_json(self, color: tuple) -> dict:
+        """Process the color as a json object.
+
+        Args:
+            text_color (tuple): Color of the text (Red, Green, Blue). Ex: (0, 0, 0)
+
+        Returns:
+            dict: Color as a json object
+        """
+
+        return {
+            "red": color[0],
+            "green": color[1],
+            "blue": color[2],
+        }
 
     def set_outer_border_range_request(
         self,
@@ -567,42 +617,21 @@ class SheetTool:
             color (tuple, optional): Color of the border. Defaults to (0, 0, 0).
         """
 
-        processed_range: tuple = self.process_range(range)
+        processed_range: tuple = self._process_range(range)
 
         border_format = {
             "updateBorders": {
-                "range": {
-                    "sheetId": processed_range[0],
-                    "startColumnIndex": processed_range[1],
-                    "startRowIndex": processed_range[2],
-                    "endColumnIndex": processed_range[3],
-                    "endRowIndex": processed_range[4],
-                },
-                "top": {
-                    "style": type,
-                    "color": {"red": color[0], "green": color[1], "blue": color[2]},
-                },
-                "bottom": {
-                    "style": type,
-                    "color": {"red": color[0], "green": color[1], "blue": color[2]},
-                },
-                "left": {
-                    "style": type,
-                    "color": {"red": color[0], "green": color[1], "blue": color[2]},
-                },
-                "right": {
-                    "style": type,
-                    "color": {"red": color[0], "green": color[1], "blue": color[2]},
-                },
+                "range": self._format_range_json(processed_range),
+                "top": self.set_border_style_json(type, color),
+                "bottom": self.set_border_style_json(type, color),
+                "left": self.set_border_style_json(type, color),
+                "right": self.set_border_style_json(type, color),
             }
         }
-        self._requests.append(border_format)
+        self.__requests.append(border_format)
 
     def set_bottom_border_range_request(
-        self,
-        range: str,
-        type: str = "SOLID",
-        color: tuple = (0, 0, 0)
+        self, range: str, type: str = "SOLID", color: tuple = (0, 0, 0)
     ) -> None:
         """Set the bottom border for a range of cells.
         Adds the request to requests pool.
@@ -623,41 +652,85 @@ class SheetTool:
             color (tuple, optional): Color of the border. Defaults to (0, 0, 0).
         """
 
-        processed_range: tuple = self.process_range(range)
+        processed_range: tuple = self._process_range(range)
 
         border_format = {
             "updateBorders": {
-                "range": {
-                    "sheetId": processed_range[0],
-                    "startColumnIndex": processed_range[1],
-                    "startRowIndex": processed_range[2],
-                    "endColumnIndex": processed_range[3],
-                    "endRowIndex": processed_range[4],
-                },
-                "bottom": {
-                    "style": type,
-                    "color": {"red": color[0], "green": color[1], "blue": color[2]},
-                },
+                "range": self._format_range_json(processed_range),
+                "bottom": self.set_border_style_json(type, color),
             }
         }
-        self._requests.append(border_format)
+        self.__requests.append(border_format)
 
-    def process_range(self, range: str) -> tuple:
+    def _format_range_json(self, processed_range: tuple) -> dict:
+        """Format the range as a dict to inject into json.
+
+        Args:
+            processed_range (tuple): Processed range. Ex: (1, 0, 0, 1, 1)
+
+        Returns:
+            dict: Range
+        """
+
+        return {
+            "sheetId": processed_range[0],
+            "startColumnIndex": processed_range[1],
+            "startRowIndex": processed_range[2],
+            "endColumnIndex": processed_range[3],
+            "endRowIndex": processed_range[4],
+        }
+
+    def set_border_style_json(self, type: str, color: tuple) -> dict:
+        """Set the border style as a json object.
+
+        Args:
+            type (str): Type of border. Ex: "SOLID"
+            color (tuple): Color of the border. Ex: (0, 0, 0)
+
+        Returns:
+            dict: Border style as a json object
+        """
+
+        return {"style": type, "color": self._format_color_json(color)}
+
+    def _process_range(self, range: str) -> tuple:
         """Process the range as integers or strings.
-        
+
         Args:
             range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1 or 1,2,3,4
-            
+
         Returns:
             tuple: Processed range
         """
 
         if "," in range:
-            return self.process_range_as_ints(range)
+            return self._process_range_as_ints(range)
         else:
-            return self.process_range_as_str(range)
+            return self._process_range_as_str(range)
 
-    def process_range_as_str(self, range: str) -> tuple:
+    def _process_range_as_ints(self, range: str) -> tuple:
+        """Process the range as integers. Some parts of the API require
+        the range to be integers instead of letters and numbers.
+
+        Args:
+            range (str): Range of the sheet. Ex: "Sheet,1,2,3,4"
+
+        Returns:
+            tuple: Processed range as integers. Ex: (1,2,3,4,5)
+        """
+
+        range = range.split(",")
+        sheet_id: int = self.__current_sheets[range[0]]
+
+        return (
+            sheet_id,
+            int(range[1]),
+            int(range[2]),
+            int(range[3]),
+            int(range[4]),
+        )
+
+    def _process_range_as_str(self, range: str) -> tuple:
         """
         Process the range into sheet_id and starting and ending cell.
         Adds the request to requests pool.
@@ -673,19 +746,19 @@ class SheetTool:
         range_parts: list = range.split("!")
 
         try:
-            sheet_id: int = self._current_sheets[range_parts[0]]
+            sheet_id: int = self.__current_sheets[range_parts[0]]
         except KeyError as e:
             raise e
-        
+
         start_pair = list()
         end_pair = list()
         range_pair_values: list = range_parts[1].split(":")
 
         if len(range_pair_values) > 1:
-            start_pair: list = self.process_cell_pair(range_pair_values[0])
-            end_pair: list = self.process_cell_pair(range_pair_values[1])
+            start_pair: list = self._process_cell_pair(range_pair_values[0])
+            end_pair: list = self._process_cell_pair(range_pair_values[1])
         else:
-            start_pair: list = self.process_cell_pair(range_pair_values[0])
+            start_pair: list = self._process_cell_pair(range_pair_values[0])
             end_pair: list = [-1, -1]
 
         return (
@@ -696,30 +769,8 @@ class SheetTool:
             end_pair[1],
         )
 
-    def process_range_as_ints(self, range: str) -> tuple:
-        """Process the range as integers. Some parts of the API require
-        the range to be integers instead of letters and numbers.
-        
-        Args:
-            range (str): Range of the sheet. Ex: "1,2,3,4"
-        
-        Returns:
-            tuple: Processed range as integers. Ex: (1,2,3,4,5)
-        """
-
-        range = range.split(",")
-        sheet_id: int = self._current_sheets[range[0]]
-
-        return (
-            sheet_id,
-            int(range[1]),
-            int(range[2]),
-            int(range[3]),
-            int(range[4]),
-        )
-
-############ LOOK INTO THIS ###############################
-    def process_cell_pair(self, pair: str) -> list:
+    ############ LOOK INTO THIS ###############################
+    def _process_cell_pair(self, pair: str) -> list:
         """Determine the cell pair
 
         Args:
@@ -748,60 +799,14 @@ class SheetTool:
                 alpha_chars += char
             else:
                 num_chars += char
-        
+
         if num_chars == "":
             return [base_columns[alpha_chars], -1]
         if alpha_chars == "":
             return [0, int(num_chars)]
-        
+
         return [base_columns[alpha_chars], int(num_chars)]
 
-    def clear_sheet_values(self, range: str) -> None:
-        """Clear the values of a sheet.
-        This is not batched and will be executed immediately.
-
-        Args:
-            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
-        """
-
-        try:
-            self._sheet.values().clear(
-                spreadsheetId=self._spreadsheet_id, range=range
-            ).execute()
-        except HttpError as e:
-            raise e
-
-    def clear_sheet_colors(self, sheet_name: str) -> None:
-        """Clear the color of a sheet by calling fill_range_request and setting to white.
-        Adds the request to requests pool.
-        This will update when the next batch_update is called.
-        
-        Args:
-            sheet_name (str): Name of the sheet to clear
-        """
-
-        sheet_props = self.get_spreadsheet_properties()
-        last_row = sheet_props["sheets"][0]["properties"]["gridProperties"]["rowCount"]
-        last_column = sheet_props["sheets"][0]["properties"]["gridProperties"][
-            "columnCount"
-        ]
-        self.fill_range_request(f"{sheet_name},0,0,{last_column},{last_row}", (1, 1, 1))
-
-    def reset_sheet_font(self, sheet_name: str) -> None:
-        """Reset the font of a sheet by calling format_font_range_request and setting to default.
-        Adds the request to requests pool.
-        This will update when the next batch_update is called.
-        
-        Args:
-            sheet_name (str): Name of the sheet to reset
-        """
-
-        sheet_props: dict = self.get_spreadsheet_properties()
-        last_row = sheet_props["sheets"][0]["properties"]["gridProperties"]["rowCount"]
-        last_column = sheet_props["sheets"][0]["properties"]["gridProperties"][
-            "columnCount"
-        ]
-        self.format_font_range_request( f"{sheet_name},0,0,{last_column},{last_row}")
 
 if __name__ == "__main__":
     print("This is a module...")

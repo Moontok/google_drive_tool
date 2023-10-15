@@ -23,7 +23,12 @@ def main():
     try:
         tool.set_spreadsheet(general_info["sheet_id"])
         
-        tool.resize_request("SheetNew!11:11", 200)
+        tool.format_font_range_request(
+            "SheetNew!A1:C1",
+            font_family="Times New Roman",
+            bold=True,
+            font_size=30,
+            )
         tool.batch_update()
 
 

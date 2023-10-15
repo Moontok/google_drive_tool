@@ -21,7 +21,7 @@ def main():
     tool.setup(g_info_path)
     tool.set_spreadsheet(general_info["sheet_id"])
     
-    tool.fill_range_request("SheetNew!F2", (.5, 0, 1))
+    tool.delete_sheet_request("Zack")
     tool.batch_update()
 
 

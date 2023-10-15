@@ -757,55 +757,44 @@ class SheetTool:
         if len(range_pair_values) > 1:
             start_pair: list = self._process_cell_pair(range_pair_values[0])
             end_pair: list = self._process_cell_pair(range_pair_values[1])
+            end_pair = [x + 1 for x in end_pair]
         else:
             start_pair: list = self._process_cell_pair(range_pair_values[0])
-            end_pair: list = [-1, -1]
+            end_pair: list = [x + 1 for x in start_pair]
+
+        print(start_pair, end_pair)
 
         return (
             sheet_id,
             start_pair[0],
-            start_pair[1] - 1,
-            end_pair[0] + 1,
+            start_pair[1],
+            end_pair[0],
             end_pair[1],
         )
 
     ############ LOOK INTO THIS ###############################
-    def _process_cell_pair(self, pair: str) -> list:
-        """Determine the cell pair
+    def _process_cell_pair(self, pair: str) -> tuple:
+        """Process a cell pair into a list of two elements
 
         Args:
-            pair (str): Cell pair. Ex: A1 or 1
+            pair (str): A cell pair. Ex: "A1"
 
         Returns:
-            list: Processed cell pair. Ex: [0, 1]
+            list: A list of two elements [0, 0]
         """
 
-        letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-        number_columns = 52
-        base_columns = {}
-
-        # Map column letters to numerical value.
-        for x in range(number_columns):
-            if x // 26 == 0:
-                base_columns[letters[x]] = x
-            elif x // 26 == 1:
-                base_columns[f"A{letters[x % 26]}"] = x
-
-        alpha_chars = ""
-        num_chars = ""
-        for char in pair:
-            if char.isalpha():
-                alpha_chars += char
-            else:
-                num_chars += char
-
-        if num_chars == "":
-            return [base_columns[alpha_chars], -1]
-        if alpha_chars == "":
-            return [0, int(num_chars)]
-
-        return [base_columns[alpha_chars], int(num_chars)]
+        pair = pair.upper()
+        row_digits = ""
+        col = 0
+        for letter in pair:
+            if letter.isalpha():
+                col *= 26
+                col += ord(letter) - ord('A') + 1
+            elif letter.isdigit():
+                row_digits += letter
+        col -= 1 if col > 0 else 0
+        row = int(row_digits) - 1
+        return (col, row)
 
 
 if __name__ == "__main__":

@@ -19,23 +19,10 @@ def main():
 
     tool = gdt.SheetTool()
     tool.setup(g_info_path)
-
-    try:
-        tool.set_spreadsheet(general_info["sheet_id"])
-        
-        tool.format_font_range_request(
-            "SheetNew!A1:C1",
-            font_family="Times New Roman",
-            bold=True,
-            font_size=30,
-            )
-        tool.batch_update()
-
-
-    except HttpError as e:
-        print(f"Error with communicating with Google:\n{e}")
-    except KeyError as e:
-        print(f"Error with key:\n{e}")
+    tool.set_spreadsheet(general_info["sheet_id"])
+    
+    tool.fill_range_request("SheetNew!F2", (.5, 0, 1))
+    tool.batch_update()
 
 
 def json_pretty_dump(data: dict, file_name: str) -> None:

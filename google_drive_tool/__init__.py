@@ -103,6 +103,18 @@ class SheetTool:
 
             self.__current_sheets[title] = id
 
+    def get_sheet_id(self, sheet_name: str) -> int:
+        """Get the sheet ID of the specified sheet name
+
+        Args:
+            sheet_name (str): Name of the sheet
+
+        Returns:
+            int: ID of the sheet
+        """
+
+        return self.__current_sheets[sheet_name]
+
     def get_spreadsheet_properties(self) -> dict:
         """Get the properties of a spreadsheet.
         This is not batched and will be executed immediately.
@@ -156,6 +168,16 @@ class SheetTool:
         return results["sheets"][0]["data"][0]["rowData"][0]["values"][0][
             "effectiveFormat"
         ]["backgroundColor"]
+
+    def add_external_request(self, request: dict) -> None:
+        """Add a request to the requests pool.
+        This will update when the next batch_update is called.
+
+        Args:
+            request (dict): Request to add
+        """
+
+        self.__requests.append(request)
 
     def clear_sheet_values(self, range: str) -> None:
         """Clear the values of a sheet.
@@ -421,7 +443,7 @@ class SheetTool:
             size (int): Size to resize the column or row.
         """
 
-        processed_range: tuple = self._process_range(range)
+        processed_range: tuple = self.process_range(range)
 
         dimension: str = ""
         start_index: int = 0
@@ -477,7 +499,7 @@ class SheetTool:
             wrapping (str, optional): Wrapping strategy. Defaults to "CLIP".
         """
 
-        processed_range: tuple = self._process_range(range)
+        processed_range: tuple = self.process_range(range)
 
         format_style = {
             "repeatCell": {
@@ -509,7 +531,7 @@ class SheetTool:
             merge_type (str, optional): Type of merge. Defaults to "MERGE_ALL".
         """
 
-        processed_range: tuple = self._process_range(range)
+        processed_range: tuple = self.process_range(range)
 
         format_style = {
             "mergeCells": {
@@ -545,7 +567,7 @@ class SheetTool:
             color (tuple, optional): Color of the text (Red, Green, Blue). Defaults to (0, 0, 0).
         """
 
-        processed_range: tuple = self._process_range(range)
+        processed_range: tuple = self.process_range(range)
 
         format_style = {
             "repeatCell": {
@@ -578,7 +600,7 @@ class SheetTool:
             fill_color (tuple, optional): Color of the fill (Red, Green, Blue). Defaults to (1, 1, 1).
         """
 
-        processed_range: tuple = self._process_range(range)
+        processed_range: tuple = self.process_range(range)
 
         format_style = {
             "repeatCell": {
@@ -619,7 +641,7 @@ class SheetTool:
             color (tuple, optional): Color of the border. Defaults to (0, 0, 0).
         """
 
-        processed_range: tuple = self._process_range(range)
+        processed_range: tuple = self.process_range(range)
 
         border_format = {
             "updateBorders": {
@@ -655,7 +677,7 @@ class SheetTool:
             color (tuple, optional): Color of the border. Defaults to (0, 0, 0).
         """
 
-        processed_range: tuple = self._process_range(range)
+        processed_range: tuple = self.process_range(range)
 
         border_format = {
             "updateBorders": {
@@ -712,7 +734,7 @@ class SheetTool:
             "endRowIndex": processed_range[4],
         }
 
-    def _process_range(self, range: str) -> tuple:
+    def process_range(self, range: str) -> tuple:
         """Process the range as integers or strings.
 
         Args:

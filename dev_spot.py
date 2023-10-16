@@ -7,6 +7,7 @@ import json
 from googleapiclient.errors import HttpError
 
 import google_drive_tool as gdt
+from google_drive_tool.chart import Chart
 
 
 def main():
@@ -20,8 +21,20 @@ def main():
     tool = gdt.SheetTool()
     tool.setup(g_info_path)
     tool.set_spreadsheet(general_info["sheet_id"])
-    
-    tool.delete_sheet_request("Zack")
+        
+    chart = Chart(
+        tool.get_sheet_id("Sheet3"),
+        (5, 5),
+        tool.process_range("Sheet3!A1:A11"),
+        chart_type="LINE",
+        title="My Chart",
+    )
+    chart.add_axis(title="X Title", position="BOTTOM_AXIS")
+    chart.add_axis(title="Y Title", position="LEFT_AXIS")
+    chart.add_series("First", tool.process_range("Sheet3!B1:B11"), color=(1, 0, 0))
+    chart.add_series("Second", tool.process_range("Sheet3!C1:C11"), color=(0, 1, 0))
+    chart.setup_chart()
+    tool.add_external_request(chart.get_request_body())
     tool.batch_update()
 
 

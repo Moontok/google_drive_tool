@@ -1,10 +1,21 @@
 
 def main():
-    print(process_cell_pair("1"))
-    print(process_cell_pair("A1"))
-    print(process_cell_pair("AA1"))
-    print(process_cell_pair("BA100"))
-    print(process_cell_pair("CA3"))
+    remove_comments_from_script("sample.py")
+
+def remove_comments_from_script(filename: str) -> None:
+
+    with open(filename, "r") as f:
+        lines = f.readlines()
+
+    new_lines = []
+    for line in lines:
+        if line.strip().startswith("#"):
+            continue
+        
+        new_lines.append(line.split("#")[0])
+
+    with open(f"new_{filename}", "w") as f:
+        f.writelines(new_lines)
 
 def process_cell_pair(pair: str) -> list:
     """Process a cell pair into a list of two elements

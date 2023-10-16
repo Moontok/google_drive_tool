@@ -50,7 +50,6 @@ class Chart:
         self.__chart_body = {}
         self.__axis_list = []
         self.__series = []
-        self.__chart_style = "basicChart"
 
     def setup_chart(self) -> None:
         """Setup the chart."""
@@ -75,7 +74,7 @@ class Chart:
                         "title": self.__title,
                         "titleTextFormat": {
                             "foregroundColorStyle": {
-                                "rgbColor": {self._format_color(self.__color)},
+                                "rgbColor": self._format_color(self.__color),
                             },
                             "fontFamily": self.__font,
                             "fontSize": self.__font_size,
@@ -88,7 +87,7 @@ class Chart:
                         "subtitle": self.__subtitle if self.__subtitle != "" else "",
                         "subtitleTextFormat": {
                             "foregroundColorStyle": {
-                                "rgbColor": {self._format_color(self.__color)},
+                                "rgbColor": self._format_color(self.__color),
                             },
                             "fontFamily": self.__font,
                             "fontSize": self.__subtitle_font_size,
@@ -99,7 +98,7 @@ class Chart:
                             "horizontalAlignment": self.__alignment,
                         },
                         "backgroundColorStyle": {
-                            "rgbColor": {self._format_color(self.__bg_color)},
+                            "rgbColor": self._format_color(self.__bg_color),
                         },
                         "basicChart": self._setup_chart_part(
                             domain_range=self.__domain_range,
@@ -131,14 +130,14 @@ class Chart:
         """
 
         return {
-            "chartType": self.__chart_style,
+            "chartType": self.__chart_type,
             "legendPosition": legend_position if has_legend else "NO_LEGEND",
             "axis": [self.__axis_list],
             "domains": [
                 {
                     "domain": {
                         "sourceRange": {
-                            "sources": [{self._format_range(domain_range)}],
+                            "sources": [self._format_range(domain_range)],
                         },
                     },
                 },
@@ -185,7 +184,7 @@ class Chart:
                     "italic": is_italic,
                     "bold": is_bold,
                     "foregroundColorStyle": {
-                        "rgbColor": {self._format_color(color)},
+                        "rgbColor": self._format_color(color),
                     },
                 },
             }
@@ -217,11 +216,11 @@ class Chart:
                     "type": line_style,
                 },
                 "colorStyle": {
-                    "rgbColor": {self._format_color(color)},
+                    "rgbColor": self._format_color(color),
                 },
                 "series": {
                     "sourceRange": {
-                        "sources": [{self._format_range(range)}],
+                        "sources": [self._format_range(range)],
                     },
                 },
             }

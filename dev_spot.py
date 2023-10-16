@@ -25,14 +25,14 @@ def main():
     chart = Chart(
         tool.get_sheet_id("Sheet3"),
         (5, 5),
-        tool.process_range("Sheet3!A1:A11"),
+        tool.process_range("Sheet3!A1:A43"),
         chart_type="LINE",
         title="My Chart",
     )
     chart.add_axis(title="X Title", position="BOTTOM_AXIS")
     chart.add_axis(title="Y Title", position="LEFT_AXIS")
-    chart.add_series("First", tool.process_range("Sheet3!B1:B11"), color=(1, 0, 0))
-    chart.add_series("Second", tool.process_range("Sheet3!C1:C11"), color=(0, 1, 0))
+    chart.add_series(tool.process_range("Sheet3!B1:B43"), color=(1, 0, 0))
+    chart.add_series(tool.process_range("Sheet3!C1:C43"), color=(0, 1, 0))
     chart.setup_chart()
     tool.add_external_request(chart.get_request_body())
     tool.batch_update()

@@ -47,17 +47,15 @@ class Chart:
         self.__subtitle_italic = subtitle_italic
         self.__has_legend = has_legend
         self.__legend_position = legend_position
-
-        # Not Set
-        self.chart_body = {}
-        self.chart_type = "basicChart"
-        self.axis_list = []
-        self.series = []
+        self.__chart_body = {}
+        self.__axis_list = []
+        self.__series = []
+        self.__chart_style = "basicChart"
 
     def setup_chart(self) -> None:
         """Setup the chart."""
 
-        self.chart_body = {
+        self.__chart_body = {
             "addChart": {
                 "chart": {
                     "position": {
@@ -77,11 +75,7 @@ class Chart:
                         "title": self.__title,
                         "titleTextFormat": {
                             "foregroundColorStyle": {
-                                "rgbColor": {
-                                    "red": self.__color[0],
-                                    "green": self.__color[1],
-                                    "blue": self.__color[2],
-                                },
+                                "rgbColor": {self._format_color(self.__color)},
                             },
                             "fontFamily": self.__font,
                             "fontSize": self.__font_size,
@@ -94,11 +88,7 @@ class Chart:
                         "subtitle": self.__subtitle if self.__subtitle != "" else "",
                         "subtitleTextFormat": {
                             "foregroundColorStyle": {
-                                "rgbColor": {
-                                    "red": self.__color[0],
-                                    "green": self.__color[1],
-                                    "blue": self.__color[2],
-                                },
+                                "rgbColor": {self._format_color(self.__color)},
                             },
                             "fontFamily": self.__font,
                             "fontSize": self.__subtitle_font_size,
@@ -109,11 +99,7 @@ class Chart:
                             "horizontalAlignment": self.__alignment,
                         },
                         "backgroundColorStyle": {
-                            "rgbColor": {
-                                "red": self.__bg_color[0],
-                                "green": self.__bg_color[1],
-                                "blue": self.__bg_color[2],
-                            },
+                            "rgbColor": {self._format_color(self.__bg_color)},
                         },
                         "basicChart": self._setup_chart_part(
                             domain_range=self.__domain_range,
@@ -133,39 +119,31 @@ class Chart:
         num_of_headers: int = 1,
     ) -> dict:
         """Set the chart parts.
-        
+
         Args:
             domain_range (tuple, optional): The range of the domain. Defaults to tuple().
             has_legend (bool, optional): Whether the chart has a legend. Defaults to True.
             legend_position (str, optional): The position of the legend. Defaults to "BOTTOM_LEGEND".
             num_of_headers (int, optional): The number of headers. Defaults to 1.
-            
+
         Returns:
             dict: The chart parts
         """
 
         return {
-            "chartType": self.__chart_type,
+            "chartType": self.__chart_style,
             "legendPosition": legend_position if has_legend else "NO_LEGEND",
-            "axis": [self.axis_list],
+            "axis": [self.__axis_list],
             "domains": [
                 {
                     "domain": {
                         "sourceRange": {
-                            "sources": [
-                                {
-                                    "sheetId": domain_range[0],
-                                    "startColumnIndex": domain_range[1],
-                                    "startRowIndex": domain_range[2],
-                                    "endColumnIndex": domain_range[3],
-                                    "endRowIndex": domain_range[4],
-                                },
-                            ],
+                            "sources": [{self._format_range(domain_range)}],
                         },
                     },
                 },
             ],
-            "series": self.series,
+            "series": self.__series,
             "headerCount": num_of_headers,
         }
 
@@ -194,7 +172,7 @@ class Chart:
             dict: The axis
         """
 
-        self.axis_list.append(
+        self.__axis_list.append(
             {
                 "position": position,
                 "title": title,
@@ -207,11 +185,7 @@ class Chart:
                     "italic": is_italic,
                     "bold": is_bold,
                     "foregroundColorStyle": {
-                        "rgbColor": {
-                            "red": color[0],
-                            "green": color[1],
-                            "blue": color[2],
-                        },
+                        "rgbColor": {self._format_color(color)},
                     },
                 },
             }
@@ -235,7 +209,7 @@ class Chart:
             line_style (str, optional): The style of the line. Defaults to "SOLID".
         """
 
-        self.series.append(
+        self.__series.append(
             {
                 "targetAxis": target_axis,
                 "lineStyle": {
@@ -243,27 +217,49 @@ class Chart:
                     "type": line_style,
                 },
                 "colorStyle": {
-                    "rgbColor": {
-                        "red": color[0],
-                        "green": color[1],
-                        "blue": color[2],
-                    },
+                    "rgbColor": {self._format_color(color)},
                 },
                 "series": {
                     "sourceRange": {
-                        "sources": [
-                            {
-                                "sheetId": range[0],
-                                "startColumnIndex": range[1],
-                                "startRowIndex": range[2],
-                                "endColumnIndex": range[3],
-                                "endRowIndex": range[4],
-                            },
-                        ],
+                        "sources": [{self._format_range(range)}],
                     },
                 },
             }
         )
+
+    def _format_color(self, color: tuple) -> dict:
+        """Format a color.
+
+        Args:
+            color (tuple): The color to format
+
+        Returns:
+            dict: The formatted color
+        """
+
+        return {
+            "red": color[0],
+            "green": color[1],
+            "blue": color[2],
+        }
+
+    def _format_range(self, range: tuple) -> dict:
+        """Format a range.
+
+        Args:
+            range (tuple): The range to format
+
+        Returns:
+            dict: The formatted range
+        """
+
+        return {
+            "sheetId": range[0],
+            "startColumnIndex": range[1],
+            "startRowIndex": range[2],
+            "endColumnIndex": range[3],
+            "endRowIndex": range[4],
+        }
 
     def get_request_body(self) -> dict:
         """Get the request body for the chart.
@@ -271,4 +267,4 @@ class Chart:
         Returns:
             dict: The request body
         """
-        return self.chart_body
+        return self.__chart_body

@@ -1,5 +1,6 @@
-
 class Chart:
+    """A chart for a Google Sheet."""
+
     def __init__(
         self,
         sheet_id: int,
@@ -46,17 +47,17 @@ class Chart:
         self.__subtitle_italic = subtitle_italic
         self.__has_legend = has_legend
         self.__legend_position = legend_position
-        
+
         # Not Set
         self.chart_body = {}
         self.chart_type = "basicChart"
         self.axis_list = []
         self.series = []
 
-    def setup_chart(self) -> dict:
+    def setup_chart(self) -> None:
         """Setup the chart."""
 
-        self.chart_body =  {
+        self.chart_body = {
             "addChart": {
                 "chart": {
                     "position": {
@@ -130,16 +131,23 @@ class Chart:
         has_legend: bool = True,
         legend_position: str = "BOTTOM_LEGEND",
         num_of_headers: int = 1,
-    ):
-        """Set the chart types
+    ) -> dict:
+        """Set the chart parts.
+        
+        Args:
+            domain_range (tuple, optional): The range of the domain. Defaults to tuple().
+            has_legend (bool, optional): Whether the chart has a legend. Defaults to True.
+            legend_position (str, optional): The position of the legend. Defaults to "BOTTOM_LEGEND".
+            num_of_headers (int, optional): The number of headers. Defaults to 1.
+            
+        Returns:
+            dict: The chart parts
         """
 
         return {
             "chartType": self.__chart_type,
-            "legendPosition": legend_position if has_legend else "NO_LEGEND",    
-            "axis": [
-                self.axis_list
-            ],
+            "legendPosition": legend_position if has_legend else "NO_LEGEND",
+            "axis": [self.axis_list],
             "domains": [
                 {
                     "domain": {
@@ -150,7 +158,7 @@ class Chart:
                                     "startColumnIndex": domain_range[1],
                                     "startRowIndex": domain_range[2],
                                     "endColumnIndex": domain_range[3],
-                                    "endRowIndex":  domain_range[4],
+                                    "endRowIndex": domain_range[4],
                                 },
                             ],
                         },
@@ -161,17 +169,16 @@ class Chart:
             "headerCount": num_of_headers,
         }
 
-
     def add_axis(
-            self,
-            position: str = "BOTTOM_AXIS",
-            title: str = "X Axis Title",
-            alignment: str = "CENTER",
-            font: str = "Arial",
-            isBold: bool = False,
-            isItalic: bool = False,
-            color: tuple = (0, 0, 0),
-    ):
+        self,
+        position: str = "BOTTOM_AXIS",
+        title: str = "X Axis Title",
+        alignment: str = "CENTER",
+        font: str = "Arial",
+        is_bold: bool = False,
+        is_italic: bool = False,
+        color: tuple = (0, 0, 0),
+    ) -> None:
         """Add an axis. Need an X and Y axis for a line chart.
 
         Args:
@@ -179,8 +186,8 @@ class Chart:
             title (str, optional): The title of the axis. Defaults to "X Axis Title".
             alignment (str, optional): The alignment of the title. Defaults to "CENTER".
             font (str, optional): The font of the title. Defaults to "Arial".
-            isBold (bool, optional): Whether the title is bold. Defaults to False.
-            isItalic (bool, optional): Whether the title is italic. Defaults to False.
+            is_bold (bool, optional): Whether the title is bold. Defaults to False.
+            is_italic (bool, optional): Whether the title is italic. Defaults to False.
             color (tuple, optional): The color of the title. Defaults to (0, 0, 0).
 
         Returns:
@@ -197,8 +204,8 @@ class Chart:
                 "format": {
                     "fontFamily": font,
                     "fontSize": self.__font_size,
-                    "italic": isItalic,
-                    "bold": isBold,
+                    "italic": is_italic,
+                    "bold": is_bold,
                     "foregroundColorStyle": {
                         "rgbColor": {
                             "red": color[0],
@@ -211,14 +218,13 @@ class Chart:
         )
 
     def add_series(
-            self,
-            series_name: str,
-            range: tuple = tuple(),
-            target_axis: str = "LEFT_AXIS",
-            color: tuple = (0, 0, 0),
-            line_width: int = 3,
-            line_style: str = "SOLID",
-        ):
+        self,
+        range: tuple = tuple(),
+        target_axis: str = "LEFT_AXIS",
+        color: tuple = (0, 0, 0),
+        line_width: int = 3,
+        line_style: str = "SOLID",
+    ) -> None:
         """Add a series to the chart.
 
         Args:
@@ -230,7 +236,7 @@ class Chart:
         """
 
         self.series.append(
-            { 
+            {
                 "targetAxis": target_axis,
                 "lineStyle": {
                     "width": line_width,
@@ -261,7 +267,7 @@ class Chart:
 
     def get_request_body(self) -> dict:
         """Get the request body for the chart.
-        
+
         Returns:
             dict: The request body
         """

@@ -7,7 +7,7 @@ import json
 from googleapiclient.errors import HttpError
 
 import google_drive_tool as gdt
-from google_drive_tool.chart import LineChart, ColumnChart, ScatterChart
+from google_drive_tool.chart import LineChart, ColumnChart, ScatterChart, PieChart
 from google_drive_tool.formatting import Color, ChartLine, chart_font_format
 
 
@@ -23,19 +23,38 @@ def main():
     tool.setup(g_info_path)
     tool.set_spreadsheet(general_info["sheet_id"])
 
-    # id = 3000
-    # create_scatter_chart(tool, id)
-    tool.fill_request("Sheet4!A1", Color.BLUE)
+    create_scatter_chart(tool)
+    create_pie_chart(tool)
+    create_column_chart(tool)
+    create_line_chart(tool)
 
     tool.batch_update()
 
 
-def create_line_chart(tool):
-    line_chart = LineChart()
-    line_chart.set_chart_id(id)
-    line_chart.set_position(
+def create_pie_chart(tool):
+    pie_chart = PieChart()
+    pie_chart.set_position(
         tool.get_sheet_id("Sheet4"),
         (4, 5),
+        (600, 400),
+    )
+    pie_chart.set_title("This is a title")
+    pie_chart.set_subtitle("This is a subtitle")
+    pie_chart.set_legend()
+    pie_chart.set_domain(tool.process_range("Sheet4!A1:A6"))
+    pie_chart.set_pie_hole_size(0.5)
+    pie_chart.add_series(
+        tool.process_range("Sheet4!B1:B6")
+    )
+    request = pie_chart.chart_request()
+    tool.add_general_request(request)
+
+
+def create_line_chart(tool):
+    line_chart = LineChart()
+    line_chart.set_position(
+        tool.get_sheet_id("Sheet4"),
+        (10, 26),
         (600, 400),
     )
 
@@ -51,6 +70,7 @@ def create_line_chart(tool):
         target_axis="LEFT_AXIS",
         color=Color.RED,
     )
+    line_chart.set_line_smoothing(True)
     line_chart.set_series_line_style(0, ChartLine.DOTTED, 10)
     line_chart.add_series(
         tool.process_range("Sheet4!C9:C51"),
@@ -87,10 +107,9 @@ def create_column_chart(tool):
     request = column_chart.chart_request()
     tool.add_general_request(request)
 
-def create_scatter_chart(tool, id):
+def create_scatter_chart(tool):
     # Scatter Chart
     scatter_chart = ScatterChart()
-    scatter_chart.set_chart_id(id)
     scatter_chart.set_position(
         tool.get_sheet_id("Sheet4"),
         (4,26),

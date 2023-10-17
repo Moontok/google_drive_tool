@@ -6,53 +6,50 @@ class Chart:
     Not to be used directly.
     """
 
-    def __init__(self, chart_type: str="NONE"):
-        self.__chart: dict = {
+    def __init__(self, chart_type: str):
+        self._chart_type: str = chart_type
+        self._chart: dict = {
             "position": None,
             "spec": {
-                "basicChart": {
-                    "chartType": chart_type,
-                    "axis": [],
-                    "domains": [],
-                    "series": [],
-                    "legendPosition": "NO_LEGEND",
-                },
+                chart_type: {},
                 "altText": "A Chart.",
             },
         }
 
     def set_chart_id(self, chart_id: int):
-        self.__chart["chartId"] = chart_id
+        self._chart["chartId"] = chart_id
 
     def set_title(self, title: str, alignment: str="CENTER"):
-        self.__chart["spec"]["title"] = title
-        self.__chart["spec"]["titleTextPosition"] = {
+        self._chart["spec"]["title"] = title
+        self._chart["spec"]["titleTextPosition"] = {
             "horizontalAlignment": alignment,
         }
 
     def set_title_font(self, font: dict):
-        self.__chart["spec"]["titleTextFormat"] = font
+        self._chart["spec"]["titleTextFormat"] = font
 
     def set_subtitle(self, subtitle: str, alignment: str="CENTER"):
-        self.__chart["spec"]["subtitle"] = subtitle
-        self.__chart["spec"]["subtitleTextPosition"] = {
+        self._chart["spec"]["subtitle"] = subtitle
+        self._chart["spec"]["subtitleTextPosition"] = {
             "horizontalAlignment": alignment,
         }
 
     def set_subtitle_font(self, font: dict):
-        self.__chart["spec"]["subtitleTextFormat"] = font
+        self._chart["spec"]["subtitleTextFormat"] = font
 
     def set_alt_text(self, alt_text: str):
-        self.__chart["spec"]["altText"] = alt_text
+        self._chart["spec"]["altText"] = alt_text
 
     def set_legend(self, position: str="BOTTOM_LEGEND"):
-        self.__chart["spec"]["basicChart"]["legendPosition"] = position
+        self._chart["spec"][self._chart_type]["legendPosition"] = position
 
     def set_background_color(self, color: tuple):
-        self.__chart["spec"]["backgroundColor"] = format_color(color)
+        self._chart["spec"]["backgroundColorStyle"] = {
+            "rgbColor": format_color(color)
+        }
 
     def set_font_family(self, font_family: str):
-        self.__chart["spec"]["fontName"] = font_family
+        self._chart["spec"]["fontName"] = font_family
 
     def set_position(
         self,
@@ -60,7 +57,7 @@ class Chart:
         anchor_cell: tuple,
         size: tuple,
     ):
-        self.__chart["position"] = {
+        self._chart["position"] = {
             "overlayPosition": {
                 "anchorCell": {
                     "sheetId": sheet_id,
@@ -71,13 +68,52 @@ class Chart:
                 "heightPixels": size[1],
             },
         }
+
+    def add_border(
+        self,
+        color: tuple=Color.BLACK,
+    ):
+        self._chart["border"] = {
+            "colorStyle": format_color(color),
+        }
+
+    def chart_request(self) -> dict:
+        if not self._chart["position"]:
+            raise ValueError("Chart position not set")
+        if not self._chart["spec"][self._chart_type]:
+            raise ValueError("Chart type not set")
+        if self._chart_type == "basicChart":
+            if len(self._chart["spec"][self._chart_type]["domains"]) == 0:
+                raise ValueError("Chart domain not set")
+            if len(self._chart["spec"][self._chart_type]["series"]) == 0:
+                raise ValueError("Chart series not set")
+            if len(self._chart["spec"][self._chart_type]["axis"]) == 0:
+                raise ValueError("Chart axis not set")
+        
+        return {
+            "addChart": {
+                "chart": self._chart
+            }
+        }
+
+
+class BasicChart(Chart):
+    def __init__(self, basic_chart_type: str):
+        super().__init__("basicChart")
+        self._chart["spec"]["basicChart"] = {
+            "chartType": basic_chart_type,
+            "axis": [],
+            "domains": [],
+            "series": [],
+            "legendPosition": "NO_LEGEND",
+        }
     
     def set_domain(
         self,
         domain_range: tuple,
         header_count: int=1,
     ):
-        self.__chart["spec"]["basicChart"]["domains"].append(
+        self._chart["spec"][self._chart_type]["domains"].append(
             {
                 "domain": {
                     "sourceRange": {
@@ -87,7 +123,7 @@ class Chart:
             },
         )
 
-        self.__chart["spec"]["basicChart"]["headerCount"] = header_count
+        self._chart["spec"][self._chart_type]["headerCount"] = header_count
 
     def add_series(
         self,
@@ -95,7 +131,7 @@ class Chart:
         target_axis: str="LEFT_AXIS",
         color: tuple=Color.BLACK,
     ):
-        self.__chart["spec"]["basicChart"]["series"].append(
+        self._chart["spec"][self._chart_type]["series"].append(
             {
                 "series": {
                     "sourceRange": {
@@ -116,7 +152,7 @@ class Chart:
         alignment: str="CENTER",
 
     ):
-        self.__chart["spec"]["basicChart"]["axis"].append(            
+        self._chart["spec"][self._chart_type]["axis"].append(            
             {
                 "position": position,
                 "title": title,
@@ -132,42 +168,16 @@ class Chart:
         min: int,
         max: int,
     ):
-        self.__chart["spec"]["basicChart"]["axis"][location]["viewWindowOptions"] = {
+        self._chart["spec"][self._chart_type]["axis"][location]["viewWindowOptions"] = {
             "viewWindowMin": min,
             "viewWindowMax": max,
         }
 
     def set_axis_font(self, location: int, font: dict):
-        self.__chart["spec"]["basicChart"]["axis"][location]["format"] = font
+        self._chart["spec"][self._chart_type]["axis"][location]["format"] = font
 
-    def add_border(
-        self,
-        color: tuple=Color.BLACK,
-    ):
-        self.__chart["border"] = {
-            "colorStyle": format_color(color),
-        }
 
-    def chart_request(self) -> dict:
-        if not self.__chart["position"]:
-            raise ValueError("Chart position not set")
-        if not self.__chart["spec"]["basicChart"]:
-            raise ValueError("Chart type not set")
-        if len(self.__chart["spec"]["basicChart"]["domains"]) == 0:
-            raise ValueError("Chart domain not set")
-        if len(self.__chart["spec"]["basicChart"]["series"]) == 0:
-            raise ValueError("Chart series not set")
-        if len(self.__chart["spec"]["basicChart"]["axis"]) == 0:
-            raise ValueError("Chart axis not set")
-        
-        return {
-            "addChart": {
-                "chart": self.__chart
-            }
-        }
-    
-
-class LineChart(Chart):
+class LineChart(BasicChart):
     def __init__(self):
         super().__init__("LINE")
 
@@ -177,29 +187,49 @@ class LineChart(Chart):
         line_style: str,
         line_width: int,
     ):
-        self._Chart__chart["spec"]["basicChart"]["series"][location]["lineStyle"] = {
+        self._chart["spec"]["basicChart"]["series"][location]["lineStyle"] = {
             "width": line_width,
             "type": line_style,
         }
 
     def set_line_smoothing(self, smoothing: bool):
-        self._Chart__chart["spec"]["basicChart"]["lineSmoothing"] = smoothing
+        self._chart["spec"]["basicChart"]["lineSmoothing"] = smoothing
 
         
-class ScatterChart(Chart):
+class ScatterChart(BasicChart):
     def __init__(self):
         super().__init__("SCATTER")
 
-    def add_trendline(
-        self,
-        trendline_type: str="LINEAR",
-        color: tuple=Color.BLACK,
-    ):
-        self._Chart__chart["spec"]["basicChart"]["series"][0]["trendline"] = [{
-            "type": trendline_type,
-        }]
 
-
-class ColumnChart(Chart):
+class ColumnChart(BasicChart):
     def __init__(self):
         super().__init__("COLUMN")
+
+
+class PieChart(Chart):
+    def __init__(self):
+        super().__init__("pieChart")
+    
+    def set_domain(
+        self,
+        domain_range: tuple,
+    ):
+        self._chart["spec"]["pieChart"]["domain"] =  {
+            "sourceRange": {
+                "sources": [format_range(domain_range)],
+            },
+        }
+
+    def add_series(
+        self,
+        series_range: tuple,
+    ):
+        self._chart["spec"]["pieChart"]["series"] = {
+            "sourceRange": {
+                "sources": [format_range(series_range)],
+            },
+        }
+
+    def set_pie_hole_size(self, size: float):
+        self._chart["spec"]["pieChart"]["pieHole"] = size
+

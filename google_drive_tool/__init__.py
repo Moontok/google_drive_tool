@@ -8,6 +8,8 @@ from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import Resource, build
 from googleapiclient.errors import HttpError
 
+from google_drive_tool.formatting import Color, format_color, format_range
+
 
 class SheetTool:
     """Base class for Google Sheets API. The base class is
@@ -503,7 +505,7 @@ class SheetTool:
 
         format_style = {
             "repeatCell": {
-                "range": self._format_range_json(processed_range),
+                "range": format_range(processed_range),
                 "cell": {
                     "userEnteredFormat": {
                         "horizontalAlignment": horizontal,
@@ -535,7 +537,7 @@ class SheetTool:
 
         format_style = {
             "mergeCells": {
-                "range": self._format_range_json(processed_range),
+                "range": format_range(processed_range),
                 "mergeType": merge_type,
             }
         }
@@ -550,7 +552,7 @@ class SheetTool:
         italic: bool = False,
         strikethrough: bool = False,
         underline: bool = False,
-        color: tuple = (0, 0, 0),
+        color: tuple = Color.BLACK,
     ) -> None:
         """Set the font for a range of cells.
         Adds the request to requests pool.
@@ -564,18 +566,18 @@ class SheetTool:
             italic (bool, optional): Italic text. Defaults to False.
             strikethrough (bool, optional): Strikethrough text. Defaults to False.
             underline (bool, optional): Underline text. Defaults to False.
-            color (tuple, optional): Color of the text (Red, Green, Blue). Defaults to (0, 0, 0).
+            color (tuple, optional): Color of the text (Red, Green, Blue). Defaults to Color.BLACK or (0, 0, 0).
         """
 
         processed_range: tuple = self.process_range(range)
 
         format_style = {
             "repeatCell": {
-                "range": self._format_range_json(processed_range),
+                "range": (processed_range),
                 "cell": {
                     "userEnteredFormat": {
                         "textFormat": {
-                            "foregroundColor": self._format_color_json(color),
+                            "foregroundColor": format_color(color),
                             "font_family": family,
                             "fontSize": font_size,
                             "bold": bold,
@@ -590,24 +592,24 @@ class SheetTool:
         }
         self.__requests.append(format_style)
 
-    def fill_request(self, range: str, fill_color: tuple = (1, 1, 1)) -> None:
+    def fill_request(self, range: str, fill_color: tuple = Color.WHITE) -> None:
         """Set the background fill for a range of cells.
         Adds the request to requests pool.
         This will update when the next batch_update is called.
 
         Args:
             range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1!A1
-            fill_color (tuple, optional): Color of the fill (Red, Green, Blue). Defaults to (1, 1, 1).
+            fill_color (tuple, optional): Color of the fill (Red, Green, Blue). Defaults to Color.White or (1, 1, 1).
         """
 
         processed_range: tuple = self.process_range(range)
 
         format_style = {
             "repeatCell": {
-                "range": self._format_range_json(processed_range),
+                "range": format_range(processed_range),
                 "cell": {
                     "userEnteredFormat": {
-                        "backgroundColor": self._format_color_json(fill_color)
+                        "backgroundColor": format_color(fill_color)
                     }
                 },
                 "fields": "userEnteredFormat(backgroundColor)",
@@ -619,7 +621,7 @@ class SheetTool:
         self,
         range: str,
         type: str = "SOLID",
-        color: tuple = (0, 0, 0),
+        color: tuple = Color.BLACK,
     ) -> None:
         """Set the outer border for a range of cells.
         Adds the request to requests pool.
@@ -638,14 +640,14 @@ class SheetTool:
         Args:
             range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
             type (str, optional): Type of border. Defaults to "SOLID".
-            color (tuple, optional): Color of the border. Defaults to (0, 0, 0).
+            color (tuple, optional): Color of the border. Defaults to Color.BLACK or (0, 0, 0).
         """
 
         processed_range: tuple = self.process_range(range)
 
         border_format = {
             "updateBorders": {
-                "range": self._format_range_json(processed_range),
+                "range": format_range(processed_range),
                 "top": self._set_border_style_json(type, color),
                 "bottom": self._set_border_style_json(type, color),
                 "left": self._set_border_style_json(type, color),
@@ -655,7 +657,7 @@ class SheetTool:
         self.__requests.append(border_format)
 
     def set_bottom_border_request(
-        self, range: str, type: str = "SOLID", color: tuple = (0, 0, 0)
+        self, range: str, type: str = "SOLID", color: tuple = Color.BLACK
     ) -> None:
         """Set the bottom border for a range of cells.
         Adds the request to requests pool.
@@ -674,14 +676,14 @@ class SheetTool:
         Args:
             range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
             type (str, optional): Type of border. Defaults to "SOLID".
-            color (tuple, optional): Color of the border. Defaults to (0, 0, 0).
+            color (tuple, optional): Color of the border. Defaults to Color.BLACK or (0, 0, 0).
         """
 
         processed_range: tuple = self.process_range(range)
 
         border_format = {
             "updateBorders": {
-                "range": self._format_range_json(processed_range),
+                "range": format_range(processed_range),
                 "bottom": self._set_border_style_json(type, color),
             }
         }
@@ -692,47 +694,13 @@ class SheetTool:
 
         Args:
             type (str): Type of border. Ex: "SOLID"
-            color (tuple): Color of the border. Ex: (0, 0, 0)
+            color (tuple): Color of the border. Ex: Color.BLACK or (0, 0, 0)
 
         Returns:
             dict: Border style as a json object
         """
 
-        return {"style": type, "color": self._format_color_json(color)}
-
-    def _format_color_json(self, color: tuple) -> dict:
-        """Process the color as a json object.
-
-        Args:
-            text_color (tuple): Color of the text (Red, Green, Blue). Ex: (0, 0, 0)
-
-        Returns:
-            dict: Color as a json object
-        """
-
-        return {
-            "red": color[0],
-            "green": color[1],
-            "blue": color[2],
-        }
-
-    def _format_range_json(self, processed_range: tuple) -> dict:
-        """Format the range as a dict to inject into json.
-
-        Args:
-            processed_range (tuple): Processed range. Ex: (1, 0, 0, 1, 1)
-
-        Returns:
-            dict: Range
-        """
-
-        return {
-            "sheetId": processed_range[0],
-            "startColumnIndex": processed_range[1],
-            "startRowIndex": processed_range[2],
-            "endColumnIndex": processed_range[3],
-            "endRowIndex": processed_range[4],
-        }
+        return {"style": type, "color": format_color(color)}
 
     def process_range(self, range: str) -> tuple:
         """Process the range as integers or strings.

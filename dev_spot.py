@@ -7,7 +7,8 @@ import json
 from googleapiclient.errors import HttpError
 
 import google_drive_tool as gdt
-from google_drive_tool.chart import Chart
+from google_drive_tool.chart import Chart, create_font
+from google_drive_tool.formatting import Color
 
 
 def main():
@@ -21,35 +22,39 @@ def main():
     tool = gdt.SheetTool()
     tool.setup(g_info_path)
     tool.set_spreadsheet(general_info["sheet_id"])
-        
-    line_chart = Chart(
-        tool.get_sheet_id("Sheet3"),
-        (5, 5),
-        tool.process_range("Sheet3!A1:A43"),
-        chart_type="LINE",
-        title="My Chart",
-    )
-    line_chart.add_axis(title="X Title", position="BOTTOM_AXIS")
-    line_chart.add_axis(title="Y Title", position="LEFT_AXIS")
-    line_chart.add_line_series(tool.process_range("Sheet3!B1:B43"), color=(1, 0, 0))
-    line_chart.add_line_series(tool.process_range("Sheet3!C1:C43"), color=(0, 1, 0))
-    line_chart.setup_chart()
-    tool.add_external_request(line_chart.get_request_body())
 
-    bar_chart = Chart(
+    line_chart = Chart()
+    font = create_font(
+        bold=True,
+        font_size=14,
+        font_family="Consolas",
+    )
+    line_chart.set_position(
         tool.get_sheet_id("Sheet4"),
-        (5, 5),
-        tool.process_range("Sheet4!A1:A6"),
-        chart_type="COLUMN",
-        title="My Chart",
+        (4, 5),
+        (600, 400),
     )
-    bar_chart.add_axis(title="Flavor", position="BOTTOM_AXIS")
-    bar_chart.add_axis(title="Votes", position="LEFT_AXIS")
-    bar_chart.add_bar_series(tool.process_range("Sheet4!B1:B6"), color=(1, 0, 0), target_axis="LEFT_AXIS")
-    bar_chart.add_bar_series(tool.process_range("Sheet4!C1:C6"), color=(0, 1, 0), target_axis="LEFT_AXIS")
-    bar_chart.setup_chart()
-    tool.add_external_request(bar_chart.get_request_body())
-
+    line_chart.set_spec("LINE")
+    line_chart.set_title("This is a title")
+    line_chart.set_title_font(font)
+    line_chart.set_subtitle("This is a subtitle")
+    line_chart.set_subtitle_font(font)
+    line_chart.set_legend()
+    line_chart.set_domain(tool.process_range("Sheet4!A9:A51"))
+    line_chart.add_axis(title="X Label", position="BOTTOM_AXIS")
+    line_chart.add_axis(title="Y Label", position="LEFT_AXIS")
+    line_chart.add_series(
+        tool.process_range("Sheet4!B9:B51"),
+        target_axis="LEFT_AXIS",
+        color=Color.RED,
+    )
+    line_chart.add_series(
+        tool.process_range("Sheet4!C9:C51"),
+        target_axis="LEFT_AXIS",
+        color=Color.GREEN,
+    )
+    request = line_chart.chart_request()
+    tool.add_external_request(request)
     tool.batch_update()
 
 

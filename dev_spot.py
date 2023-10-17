@@ -22,19 +22,34 @@ def main():
     tool.setup(g_info_path)
     tool.set_spreadsheet(general_info["sheet_id"])
         
-    chart = Chart(
+    line_chart = Chart(
         tool.get_sheet_id("Sheet3"),
         (5, 5),
         tool.process_range("Sheet3!A1:A43"),
         chart_type="LINE",
         title="My Chart",
     )
-    chart.add_axis(title="X Title", position="BOTTOM_AXIS")
-    chart.add_axis(title="Y Title", position="LEFT_AXIS")
-    chart.add_series(tool.process_range("Sheet3!B1:B43"), color=(1, 0, 0))
-    chart.add_series(tool.process_range("Sheet3!C1:C43"), color=(0, 1, 0))
-    chart.setup_chart()
-    tool.add_external_request(chart.get_request_body())
+    line_chart.add_axis(title="X Title", position="BOTTOM_AXIS")
+    line_chart.add_axis(title="Y Title", position="LEFT_AXIS")
+    line_chart.add_line_series(tool.process_range("Sheet3!B1:B43"), color=(1, 0, 0))
+    line_chart.add_line_series(tool.process_range("Sheet3!C1:C43"), color=(0, 1, 0))
+    line_chart.setup_chart()
+    tool.add_external_request(line_chart.get_request_body())
+
+    bar_chart = Chart(
+        tool.get_sheet_id("Sheet4"),
+        (5, 5),
+        tool.process_range("Sheet4!A1:A6"),
+        chart_type="COLUMN",
+        title="My Chart",
+    )
+    bar_chart.add_axis(title="Flavor", position="BOTTOM_AXIS")
+    bar_chart.add_axis(title="Votes", position="LEFT_AXIS")
+    bar_chart.add_bar_series(tool.process_range("Sheet4!B1:B6"), color=(1, 0, 0), target_axis="LEFT_AXIS")
+    bar_chart.add_bar_series(tool.process_range("Sheet4!C1:C6"), color=(0, 1, 0), target_axis="LEFT_AXIS")
+    bar_chart.setup_chart()
+    tool.add_external_request(bar_chart.get_request_body())
+
     tool.batch_update()
 
 

@@ -7,6 +7,7 @@ class Chart:
         anchor_cell: tuple,
         domain_range: tuple,
         chart_type: str,
+        number_of_headers: int = 1,
         width: int = 600,
         height: int = 371,
         font: str = "Arial",
@@ -30,6 +31,7 @@ class Chart:
         self.__anchor_cell = anchor_cell
         self.__domain_range = domain_range
         self.__chart_type = chart_type
+        self.__number_of_headers = number_of_headers
         self.__width = width
         self.__height = height
         self.__font = font
@@ -115,7 +117,6 @@ class Chart:
         domain_range: tuple = tuple(),
         has_legend: bool = True,
         legend_position: str = "BOTTOM_LEGEND",
-        num_of_headers: int = 1,
     ) -> dict:
         """Set the chart parts.
 
@@ -143,7 +144,7 @@ class Chart:
                 },
             ],
             "series": self.__series,
-            "headerCount": num_of_headers,
+            "headerCount": self.__number_of_headers,
         }
 
     def add_axis(
@@ -190,7 +191,7 @@ class Chart:
             }
         )
 
-    def add_series(
+    def add_line_series(
         self,
         range: tuple = tuple(),
         target_axis: str = "LEFT_AXIS",
@@ -198,7 +199,7 @@ class Chart:
         line_width: int = 3,
         line_style: str = "SOLID",
     ) -> None:
-        """Add a series to the chart.
+        """Add a line graph series to the chart.
 
         Args:
             range (tuple, optional): The range of the series. Defaults to tuple().
@@ -225,6 +226,35 @@ class Chart:
                 },
             }
         )
+
+    def add_bar_series(
+        self,
+        range: tuple = tuple(),
+        target_axis: str = "LEFT_AXIS",
+        color: tuple = (0, 0, 0),
+    ) -> None:
+        """Add a bar graph series to the chart.
+
+        Args:
+            range (tuple, optional): The range of the series. Defaults to tuple().
+            target_axis (str, optional): The axis the series is on. Defaults to "LEFT_AXIS".
+            color (tuple, optional): The color of the series. Defaults to (0, 0, 0).
+        """
+
+        self.__series.append(
+            {
+                "targetAxis": target_axis,
+                "colorStyle": {
+                    "rgbColor": self._format_color(color),
+                },
+                "series": {
+                    "sourceRange": {
+                        "sources": [self._format_range(range)],
+                    },
+                },
+            }
+        )
+        
 
     def _format_color(self, color: tuple) -> dict:
         """Format a color.

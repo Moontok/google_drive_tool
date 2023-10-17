@@ -8,7 +8,9 @@ from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import Resource, build
 from googleapiclient.errors import HttpError
 
-from google_drive_tool.formatting import Color, format_color, format_range
+from google_drive_tool.formatting import (
+    Color, BorderLine, format_color, format_range, cell_font_format
+)
 
 
 class SheetTool:
@@ -171,7 +173,7 @@ class SheetTool:
             "effectiveFormat"
         ]["backgroundColor"]
 
-    def add_external_request(self, request: dict) -> None:
+    def add_general_request(self, request: dict) -> None:
         """Add a request to the requests pool.
         This will update when the next batch_update is called.
 
@@ -576,15 +578,15 @@ class SheetTool:
                 "range": (processed_range),
                 "cell": {
                     "userEnteredFormat": {
-                        "textFormat": {
-                            "foregroundColor": format_color(color),
-                            "font_family": family,
-                            "fontSize": font_size,
-                            "bold": bold,
-                            "italic": italic,
-                            "strikethrough": strikethrough,
-                            "underline": underline,
-                        }
+                        "textFormat": cell_font_format(
+                            family,
+                            font_size,
+                            color,
+                            bold,
+                            italic,
+                            strikethrough,
+                            underline,
+                        )
                     }
                 },
                 "fields": "userEnteredFormat(textFormat)",
@@ -620,7 +622,7 @@ class SheetTool:
     def set_outer_border_request(
         self,
         range: str,
-        type: str = "SOLID",
+        type: str = BorderLine.SOLID,
         color: tuple = Color.BLACK,
     ) -> None:
         """Set the outer border for a range of cells.
@@ -633,7 +635,6 @@ class SheetTool:
             - SOLID
             - SOLID_MEDIUM
             - SOLID_THICK
-            - NONE
             - DOUBLE
             - NONE
 
@@ -657,7 +658,7 @@ class SheetTool:
         self.__requests.append(border_format)
 
     def set_bottom_border_request(
-        self, range: str, type: str = "SOLID", color: tuple = Color.BLACK
+        self, range: str, type: str = BorderLine.SOLID, color: tuple = Color.BLACK
     ) -> None:
         """Set the bottom border for a range of cells.
         Adds the request to requests pool.
@@ -669,7 +670,6 @@ class SheetTool:
             - SOLID
             - SOLID_MEDIUM
             - SOLID_THICK
-            - NONE
             - DOUBLE
             - NONE
 
@@ -693,7 +693,7 @@ class SheetTool:
         """Set the border style as a json object.
 
         Args:
-            type (str): Type of border. Ex: "SOLID"
+            type (str): Type of border. Ex: Line.SOLID or "SOLID"
             color (tuple): Color of the border. Ex: Color.BLACK or (0, 0, 0)
 
         Returns:

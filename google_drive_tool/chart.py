@@ -1,4 +1,4 @@
-from google_drive_tool.formatting import Color, format_color, format_range
+from google_drive_tool.formatting import Color, format_color, format_range, chart_font_format
     
 
 class Chart:
@@ -6,13 +6,23 @@ class Chart:
     Not to be used directly.
     """
 
-    def __init__(self):
-        self.__chart = {
+    def __init__(self, chart_type: str="NONE"):
+        self.__chart: dict = {
             "position": None,
             "spec": {
-                "basicChart": None
+                "basicChart": {
+                    "chartType": chart_type,
+                    "axis": [],
+                    "domains": [],
+                    "series": [],
+                    "legendPosition": "NO_LEGEND",
+                },
+                "altText": "A Chart.",
             },
         }
+
+    def set_chart_id(self, chart_id: int):
+        self.__chart["chartId"] = chart_id
 
     def set_title(self, title: str, alignment: str="CENTER"):
         self.__chart["spec"]["title"] = title
@@ -32,8 +42,17 @@ class Chart:
     def set_subtitle_font(self, font: dict):
         self.__chart["spec"]["subtitleTextFormat"] = font
 
+    def set_alt_text(self, alt_text: str):
+        self.__chart["spec"]["altText"] = alt_text
+
     def set_legend(self, position: str="BOTTOM_LEGEND"):
         self.__chart["spec"]["basicChart"]["legendPosition"] = position
+
+    def set_background_color(self, color: tuple):
+        self.__chart["spec"]["backgroundColor"] = format_color(color)
+
+    def set_font_family(self, font_family: str):
+        self.__chart["spec"]["fontName"] = font_family
 
     def set_position(
         self,
@@ -52,24 +71,11 @@ class Chart:
                 "heightPixels": size[1],
             },
         }
-
-    def set_spec(
-        self,
-        chart_type: str,
-        header_count: int=1,
-    ):
-        self.__chart["spec"]["basicChart"] = {
-            "chartType": chart_type,
-            "axis": [],
-            "domains": [],
-            "series": [],
-            "headerCount": header_count,
-            "legendPosition": "NO_LEGEND",
-        }
     
     def set_domain(
         self,
         domain_range: tuple,
+        header_count: int=1,
     ):
         self.__chart["spec"]["basicChart"]["domains"].append(
             {
@@ -79,7 +85,9 @@ class Chart:
                     },
                 },
             },
-        )        
+        )
+
+        self.__chart["spec"]["basicChart"]["headerCount"] = header_count
 
     def add_series(
         self,
@@ -106,7 +114,6 @@ class Chart:
         position: str="BOTTOM_AXIS",
         title: str="X Axis Title",
         alignment: str="CENTER",
-        font: dict=None,
 
     ):
         self.__chart["spec"]["basicChart"]["axis"].append(            
@@ -116,9 +123,22 @@ class Chart:
                 "titleTextPosition": {
                     "horizontalAlignment": alignment,
                 },
-                "format": font if font else create_font(),
             }
         )
+
+    def set_axis_view_window(
+        self,
+        location: int,
+        min: int,
+        max: int,
+    ):
+        self.__chart["spec"]["basicChart"]["axis"][location]["viewWindowOptions"] = {
+            "viewWindowMin": min,
+            "viewWindowMax": max,
+        }
+
+    def set_axis_font(self, location: int, font: dict):
+        self.__chart["spec"]["basicChart"]["axis"][location]["format"] = font
 
     def add_border(
         self,
@@ -145,23 +165,41 @@ class Chart:
                 "chart": self.__chart
             }
         }
+    
+
+class LineChart(Chart):
+    def __init__(self):
+        super().__init__("LINE")
+
+    def set_series_line_style(
+        self,
+        location: int,
+        line_style: str,
+        line_width: int,
+    ):
+        self._Chart__chart["spec"]["basicChart"]["series"][location]["lineStyle"] = {
+            "width": line_width,
+            "type": line_style,
+        }
+
+    def set_line_smoothing(self, smoothing: bool):
+        self._Chart__chart["spec"]["basicChart"]["lineSmoothing"] = smoothing
+
+        
+class ScatterChart(Chart):
+    def __init__(self):
+        super().__init__("SCATTER")
+
+    def add_trendline(
+        self,
+        trendline_type: str="LINEAR",
+        color: tuple=Color.BLACK,
+    ):
+        self._Chart__chart["spec"]["basicChart"]["series"][0]["trendline"] = [{
+            "type": trendline_type,
+        }]
 
 
-def create_font(
-    font_family: str="Arial",
-    font_size: int=10,
-    bold: bool=False,
-    italic: bool=False,
-    color: tuple=Color.BLACK,
-) -> dict:
-    """Format a font."""
-
-    return {
-        "fontFamily": font_family,
-        "fontSize": font_size,
-        "bold": bold,
-        "italic": italic,
-        "foregroundColorStyle": {
-            "rgbColor": format_color(color),
-        },
-    }
+class ColumnChart(Chart):
+    def __init__(self):
+        super().__init__("COLUMN")

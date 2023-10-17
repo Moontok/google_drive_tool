@@ -7,8 +7,8 @@ import json
 from googleapiclient.errors import HttpError
 
 import google_drive_tool as gdt
-from google_drive_tool.chart import Chart, create_font
-from google_drive_tool.formatting import Color
+from google_drive_tool.chart import LineChart, ColumnChart, ScatterChart
+from google_drive_tool.formatting import Color, ChartLine, chart_font_format
 
 
 def main():
@@ -23,22 +23,25 @@ def main():
     tool.setup(g_info_path)
     tool.set_spreadsheet(general_info["sheet_id"])
 
-    line_chart = Chart()
-    font = create_font(
-        bold=True,
-        font_size=14,
-        font_family="Consolas",
-    )
+    # id = 3000
+    # create_scatter_chart(tool, id)
+    tool.fill_request("Sheet4!A1", Color.BLUE)
+
+    tool.batch_update()
+
+
+def create_line_chart(tool):
+    line_chart = LineChart()
+    line_chart.set_chart_id(id)
     line_chart.set_position(
         tool.get_sheet_id("Sheet4"),
         (4, 5),
         (600, 400),
     )
-    line_chart.set_spec("LINE")
+
+    # Line Chart
     line_chart.set_title("This is a title")
-    line_chart.set_title_font(font)
     line_chart.set_subtitle("This is a subtitle")
-    line_chart.set_subtitle_font(font)
     line_chart.set_legend()
     line_chart.set_domain(tool.process_range("Sheet4!A9:A51"))
     line_chart.add_axis(title="X Label", position="BOTTOM_AXIS")
@@ -48,14 +51,71 @@ def main():
         target_axis="LEFT_AXIS",
         color=Color.RED,
     )
+    line_chart.set_series_line_style(0, ChartLine.DOTTED, 10)
     line_chart.add_series(
         tool.process_range("Sheet4!C9:C51"),
         target_axis="LEFT_AXIS",
         color=Color.GREEN,
     )
     request = line_chart.chart_request()
-    tool.add_external_request(request)
-    tool.batch_update()
+    tool.add_general_request(request)
+
+def create_column_chart(tool):
+    # Column Chart
+    column_chart = ColumnChart()
+    column_chart.set_position(
+        tool.get_sheet_id("Sheet4"),
+        (10, 5),
+        (600, 400),
+    )
+    column_chart.set_title("This is a title")
+    column_chart.set_subtitle("This is a subtitle")
+    column_chart.set_legend()
+    column_chart.set_domain(tool.process_range("Sheet4!A1:A6"))
+    column_chart.add_axis(title="X Label", position="BOTTOM_AXIS")
+    column_chart.add_axis(title="Y Label", position="LEFT_AXIS")
+    column_chart.add_series(
+        tool.process_range("Sheet4!B1:B6"),
+        target_axis="LEFT_AXIS",
+        color=Color.RED,
+    )
+    column_chart.add_series(
+        tool.process_range("Sheet4!C1:C6"),
+        target_axis="LEFT_AXIS",
+        color=Color.GREEN,
+    )
+    request = column_chart.chart_request()
+    tool.add_general_request(request)
+
+def create_scatter_chart(tool, id):
+    # Scatter Chart
+    scatter_chart = ScatterChart()
+    scatter_chart.set_chart_id(id)
+    scatter_chart.set_position(
+        tool.get_sheet_id("Sheet4"),
+        (4,26),
+        (600, 400),
+    )
+    scatter_chart.set_title("This is a title")
+    scatter_chart.set_subtitle("This is a subtitle")
+    scatter_chart.set_legend()
+    scatter_chart.set_domain(tool.process_range("Sheet4!A9:A51"))
+    scatter_chart.add_axis(title="X Label", position="BOTTOM_AXIS")
+    scatter_chart.add_axis(title="Y Label", position="LEFT_AXIS")
+    scatter_chart.add_series(
+        tool.process_range("Sheet4!B9:B51"),
+        target_axis="LEFT_AXIS",
+        color=Color.RED,
+    )
+    scatter_chart.add_series(
+        tool.process_range("Sheet4!C9:C51"),
+        target_axis="LEFT_AXIS",
+        color=Color.GREEN,
+    )
+    scatter_chart.set_background_color((.9, .9, 1))
+    scatter_chart.set_font_family("Consolas")
+    request = scatter_chart.chart_request()
+    tool.add_general_request(request)
 
 
 def json_pretty_dump(data: dict, file_name: str) -> None:

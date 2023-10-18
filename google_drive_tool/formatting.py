@@ -18,6 +18,7 @@ class Color:
     LIME = (0.5, 1, 0)
     TEAL = (0, 0.5, 0.5)
 
+
 class BorderLine:
     """A class to represent the line of a border."""
 
@@ -28,6 +29,7 @@ class BorderLine:
     SOLID_MEDIUM = "SOLID_MEDIUM"
     SOLID_THICK = "SOLID_THICK"
     DOUBLE = "DOUBLE"
+
 
 class ChartLine:
     """A class to represent a line in a chart."""
@@ -41,13 +43,12 @@ class ChartLine:
     LONG_DASHED_DOTTED = "LONG_DASHED_DOTTED"
 
 
-
 def format_color(color: tuple) -> dict:
     """Format a color.
-    
+
     Args:
         color: A tuple of 3 floats between 0 and 1.
-        
+
         Returns:
             A dict with the color formatted for the API.
     """
@@ -57,14 +58,14 @@ def format_color(color: tuple) -> dict:
         "green": color[1],
         "blue": color[2],
     }
-    
+
 
 def format_range(range: tuple) -> dict:
     """Format a range.
-    
+
     Args:
         range: A tuple of 5 integers.
-        
+
     Returns:
         A dict with the range formatted for the API.
     """
@@ -79,15 +80,28 @@ def format_range(range: tuple) -> dict:
 
 
 def cell_font_format(
-    font_family: str="Arial",
-    font_size: int=10,
-    color: tuple=Color.BLACK,
-    bold: bool=False,
-    italic: bool=False,
-    strikethrough: bool=False,
-    underline: bool=False,
+    font_family: str = "Arial",
+    font_size: int = 10,
+    color: tuple = Color.BLACK,
+    bold: bool = False,
+    italic: bool = False,
+    strikethrough: bool = False,
+    underline: bool = False,
 ) -> dict:
-    """Format a font."""
+    """Format a font for a cell.
+
+    Args:
+        font_family: The font family. Ex: "Arial"
+        font_size: The font size.
+        color: The font color. Ex: Color.BLACK or (0, 0, 0)
+        bold: Whether the font is bold.
+        italic: Whether the font is italic.
+        strikethrough: Whether the font is strikethrough.
+        underline: Whether the font is underlined.
+
+        Returns:
+            A dict with the font formatted for the API.
+    """
 
     return {
         "fontFamily": font_family,
@@ -101,14 +115,26 @@ def cell_font_format(
         },
     }
 
+
 def chart_font_format(
-    font_family: str="Arial",
-    font_size: int=10,
-    color: tuple=Color.BLACK,
-    bold: bool=False,
-    italic: bool=False,
+    font_family: str = "Arial",
+    font_size: int = 10,
+    color: tuple = Color.BLACK,
+    bold: bool = False,
+    italic: bool = False,
 ) -> dict:
-    """Format a font."""
+    """Format a font. This is used for charts.
+
+    Args:
+        font_family: The font family. Ex: "Arial"
+        font_size: The font size.
+        color: The font color. Ex: Color.BLACK or (0, 0, 0)
+        bold: Whether the font is bold.
+        italic: Whether the font is italic.
+
+    Returns:
+        A dict with the font formatted for the API.
+    """
 
     return {
         "fontFamily": font_family,

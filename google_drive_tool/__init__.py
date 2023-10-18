@@ -9,7 +9,11 @@ from googleapiclient.discovery import Resource, build
 from googleapiclient.errors import HttpError
 
 from google_drive_tool.formatting import (
-    Color, BorderLine, format_color, format_range, cell_font_format
+    BorderLine,
+    Color,
+    cell_font_format,
+    format_color,
+    format_range,
 )
 
 
@@ -610,9 +614,7 @@ class SheetTool:
             "repeatCell": {
                 "range": format_range(processed_range),
                 "cell": {
-                    "userEnteredFormat": {
-                        "backgroundColor": format_color(fill_color)
-                    }
+                    "userEnteredFormat": {"backgroundColor": format_color(fill_color)}
                 },
                 "fields": "userEnteredFormat(backgroundColor)",
             }

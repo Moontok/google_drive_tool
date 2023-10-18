@@ -6,7 +6,7 @@ import json
 
 from googleapiclient.errors import HttpError
 
-import google_drive_tool as gdt
+import google_drive_tool.sheets as st
 from google_drive_tool.chart import LineChart, ColumnChart, ScatterChart, PieChart
 from google_drive_tool.formatting import Color, ChartLine, chart_font_format
 
@@ -19,7 +19,7 @@ def main():
     with open(general_info_path) as f:
         general_info = json.load(f)
 
-    tool = gdt.SheetTool()
+    tool = st.SheetTool()
     tool.setup(g_info_path)
     tool.set_spreadsheet(general_info["sheet_id"])
 

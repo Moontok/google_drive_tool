@@ -203,7 +203,7 @@ class SheetTool:
             raise e
 
     def clear_sheet_colors(self, sheet_name: str) -> None:
-        """Clear the color of a sheet by calling fill_range_request and setting to white.
+        """Clear the color of a sheet by calling fill_request and setting to white.
         Adds the request to requests pool.
         This will update when the next batch_update is called.
 
@@ -211,11 +211,11 @@ class SheetTool:
             sheet_name (str): Name of the sheet to clear
         """
 
-        last_row, last_column = self._get_last_row_and_column()
+        last_row, last_column = self._get_last_row_and_column(sheet_name)
         self.fill_request(f"{sheet_name},0,0,{last_column},{last_row}", (1, 1, 1))
 
     def reset_sheet_font(self, sheet_name: str) -> None:
-        """Reset the font of a sheet by calling format_font_range_request and setting to default.
+        """Reset the font of a sheet by calling format_font_request and setting to default.
         Adds the request to requests pool.
         This will update when the next batch_update is called.
 
@@ -223,19 +223,29 @@ class SheetTool:
             sheet_name (str): Name of the sheet to reset
         """
 
-        last_row, last_column = self._get_last_row_and_column()
+        last_row, last_column = self._get_last_row_and_column(sheet_name)
         self.format_font_request(f"{sheet_name},0,0,{last_column},{last_row}")
 
-    def _get_last_row_and_column(self) -> tuple:
+    def _get_last_row_and_column(self, sheet_name: str) -> tuple:
         """Get the last row and column of the current sheet.
 
+        Args:
+            sheet_name (str): Name of the sheet to get the last row and column
+
         Returns:
-            tuple: Last row and column of the current sheet
+            tuple: Last row and column of the sheet
         """
 
         sheet_props: dict = self.get_spreadsheet_properties()
-        last_row = sheet_props["sheets"][0]["properties"]["gridProperties"]["rowCount"]
-        last_column = sheet_props["sheets"][0]["properties"]["gridProperties"][
+        target_sheet: dict = None
+
+        for sheet in sheet_props["sheets"]:
+            if sheet["properties"]["title"] == sheet_name:
+                target_sheet = sheet
+                break
+
+        last_row = target_sheet["properties"]["gridProperties"]["rowCount"]
+        last_column = target_sheet["properties"]["gridProperties"][
             "columnCount"
         ]
 
@@ -274,13 +284,13 @@ class SheetTool:
         except HttpError as e:
             raise e
 
-    def append_values(self, value: list, cell: str = "A1") -> None:
-        """Append a list of values in the next empty cell in that column
+    def append_values(self, value: list[list], cell: str = "A1") -> None:
+        """Append a list of lists of values in the next empty cell in that column
         starting at the specified cell and extending down and to the right.
         This is not batched and will be executed immediately.
 
         Args:
-            values (list): Values to append
+            value (list[list]): List of lists of values to append
             cell (str, optional): Cell location in the sheet. Defaults to "A1".
         """
 
@@ -480,7 +490,7 @@ class SheetTool:
         }
         self.__requests.append(format_style)
 
-    def align_and_wrap_cells_range_request(
+    def align_and_wrap_cells_request(
         self,
         range: str,
         horizontal: str = "LEFT",
@@ -579,7 +589,7 @@ class SheetTool:
 
         format_style = {
             "repeatCell": {
-                "range": (processed_range),
+                "range": format_range(processed_range),
                 "cell": {
                     "userEnteredFormat": {
                         "textFormat": cell_font_format(

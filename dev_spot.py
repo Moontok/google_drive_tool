@@ -23,10 +23,7 @@ def main():
     tool.setup(g_info_path)
     tool.set_spreadsheet(general_info["sheet_id"])
 
-    create_scatter_chart(tool)
-    create_pie_chart(tool)
-    create_column_chart(tool)
-    create_line_chart(tool)
+    tool.reset_sheet_font("Sheet3")
 
     tool.batch_update()
 

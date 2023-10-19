@@ -811,7 +811,10 @@ class SheetTool:
             elif letter.isdigit():
                 row_digits += letter
         col -= 1 if col > 0 else 0
-        row = int(row_digits) - 1
+        if len(row_digits) > 0:
+            row = int(row_digits) - 1
+        else:
+            row = -1
         return (col, row)
 
 

@@ -23,7 +23,8 @@ def main():
     tool.setup(g_info_path)
     tool.set_spreadsheet(general_info["sheet_id"])
 
-    tool.reset_sheet_font("Sheet3")
+    tool.resize_request("Sheet3!A:B", 200)
+    tool.resize_request("Sheet3!3:3", 100)
 
     tool.batch_update()
 

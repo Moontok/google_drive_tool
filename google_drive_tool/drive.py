@@ -10,13 +10,23 @@ from typing import Optional
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import Resource, build
 from googleapiclient.errors import HttpError
-from googleapiclient.http import MediaFileUpload
-from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
 
-class SheetTool:
-    """Base class for Google Sheets API. The base class is
-    used to setup the Google Sheets API and authenticate the service account.
+class DriveTool:
+    """A tool to interact with the Google Drive API
+
+    Attributes:
+        __service (Resource): Google Drive API service
+        __creds (Credentials): Credentials of the service account
+        
+                
+    Methods:
+        setup(service_account_file: str) -> None
+        _authenticate(service_account_file: str) -> Credentials
+        upload_file(file_name: str, folder_id: str, mimetype: str) -> str
+        export_file(file_id: str, mimetype: str) -> bytes
+        download_byte_file(file_id: str, mimetype: str) -> bytes
     """
 
     def __init__(self):

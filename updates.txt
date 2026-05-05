@@ -1,36 +1,11 @@
 ISSUES AND IMPROVEMENTS
 ========================
 
-=== BUGS ===
+2. sheets.py:60-69 — better/cleaner error handling?
 
-1. chart.py:165-167 — add_border sends malformed colorStyle to API
-   The border colorStyle is set as:
-       "colorStyle": format_color(color)
-   But format_color returns {"red": ..., "green": ..., "blue": ...}, and the API's
-   colorStyle field expects {"rgbColor": {...}}. Every other place in the codebase
-   that uses colorStyle wraps it correctly (e.g., set_background_color at line 116).
-   Fix:
-       "colorStyle": {"rgbColor": format_color(color)}
-
-2. sheets.py:60-69 — _authenticate catches the wrong exception
-   Credentials.from_service_account_file raises FileNotFoundError or ValueError when
-   the file is missing or malformed — never HttpError. The except HttpError block
-   inside _authenticate (and the same pattern in setup) will never catch these errors,
-   so a missing credentials file produces an unhandled exception with no clean message.
-
-3. sheets.py:379-380 — __sheet_id_runner can collide with real sheet IDs after set_spreadsheet
-   __sheet_id_runner starts at 1 and increments locally. When set_spreadsheet() is called
-   on an existing spreadsheet, the runner is never synced to the actual sheet IDs already
-   in use. Subsequent add_sheet_request calls could assign an ID that already exists in
-   Google's data, causing the batch update to fail.
-   Fix: at the end of set_spreadsheet(), set __sheet_id_runner to
+3. sheets.py:379-380 — set __sheet_id_runner to
    max(__current_sheets.values()) + 1.
-
-4. sheets.py:240-251 — _get_last_row_and_column crashes with a confusing error for unknown sheets
-   If sheet_name is not found, target_sheet stays None, and
-   target_sheet["properties"]["gridProperties"] raises TypeError. Should raise a
-   KeyError or ValueError with the sheet name so the caller knows what went wrong.
-
+   Is this the best route for this?
 
 === DESIGN / QUALITY ISSUES ===
 

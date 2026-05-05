@@ -65,7 +65,9 @@ class SheetTool:
             self.__creds = Credentials.from_service_account_file(
                 service_account_file, scopes=g_scopes
             )
-        except HttpError as e:
+        except FileNotFoundError as e:
+            raise e
+        except ValueError as e:
             raise e
 
     def create_spreadsheet(self, filename: str, folder_id: str) -> None:
@@ -110,6 +112,8 @@ class SheetTool:
             id = sheet["properties"]["sheetId"]
 
             self.__current_sheets[title] = id
+
+        self.__sheet_id_runner = max(self.__current_sheets.values()) + 1
 
     def get_sheet_id(self, sheet_name: str) -> int:
         """Get the sheet ID of the specified sheet name
@@ -244,6 +248,9 @@ class SheetTool:
                 target_sheet = sheet
                 break
 
+        if target_sheet is None:
+            raise ValueError(f"Sheet {sheet_name} not found in spreadsheet.")
+        
         last_row = target_sheet["properties"]["gridProperties"]["rowCount"]
         last_column = target_sheet["properties"]["gridProperties"][
             "columnCount"

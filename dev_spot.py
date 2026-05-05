@@ -23,10 +23,23 @@ def main():
     tool.setup(g_info_path)
     tool.set_spreadsheet(general_info["sheet_id"])
 
-    tool.resize_request("Sheet3!A:B", 200)
-    tool.resize_request("Sheet3!3:3", 100)
-
+    chart1: LineChart = LineChart()
+    chart1.set_domain(tool.process_range("Sheet1!A1:A8"))
+    chart1.add_series(
+        tool.process_range("Sheet1!B1:B8"),
+    )
+    chart1.add_axis(title="X Label", position="BOTTOM_AXIS")
+    chart1.add_axis(title="Y Label", position="LEFT_AXIS")
+    chart1.set_position(
+        tool.get_sheet_id("Sheet2"),
+        (1, 1),
+        (600, 400),
+    )
+    chart1.set_title("Cool Beans")
+    chart1.add_border((0, 1, 1))
+    tool.add_general_request(chart1.chart_request())
     tool.batch_update()
+
 
 
 def create_pie_chart(tool: st.SheetTool):

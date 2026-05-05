@@ -1,3 +1,5 @@
+# https://developers.google.com/workspace/sheets/api/reference/rest/v4/spreadsheets/charts#PieChartSpec
+
 from google_drive_tool.formatting import Color, format_color, format_range
 
 
@@ -163,7 +165,7 @@ class Chart:
         """
 
         self._chart["border"] = {
-            "colorStyle": format_color(color),
+            "color": format_color(color),
         }
 
     def chart_request(self) -> dict:
@@ -180,11 +182,12 @@ class Chart:
             raise ValueError("Chart position not set")
         if not self._chart["spec"][self._chart_type]:
             raise ValueError("Chart type not set")
-        if self._chart_type == "basicChart":
+        if self._chart_type == "basicChart" or self._chart_type == "pieChart":
             if len(self._chart["spec"][self._chart_type]["domains"]) == 0:
                 raise ValueError("Chart domain not set")
             if len(self._chart["spec"][self._chart_type]["series"]) == 0:
                 raise ValueError("Chart series not set")
+        if self._chart_type == "basicChart":
             if len(self._chart["spec"][self._chart_type]["axis"]) == 0:
                 raise ValueError("Chart axis not set")
 

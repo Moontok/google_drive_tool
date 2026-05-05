@@ -29,7 +29,7 @@ def main():
     tool.batch_update()
 
 
-def create_pie_chart(tool):
+def create_pie_chart(tool: st.SheetTool):
     pie_chart = PieChart()
     pie_chart.set_position(
         tool.get_sheet_id("Sheet4"),
@@ -48,7 +48,7 @@ def create_pie_chart(tool):
     tool.add_general_request(request)
 
 
-def create_line_chart(tool):
+def create_line_chart(tool: st.SheetTool):
     line_chart = LineChart()
     line_chart.set_position(
         tool.get_sheet_id("Sheet4"),
@@ -78,7 +78,8 @@ def create_line_chart(tool):
     request = line_chart.chart_request()
     tool.add_general_request(request)
 
-def create_column_chart(tool):
+
+def create_column_chart(tool: st.SheetTool):
     # Column Chart
     column_chart = ColumnChart()
     column_chart.set_position(
@@ -105,7 +106,8 @@ def create_column_chart(tool):
     request = column_chart.chart_request()
     tool.add_general_request(request)
 
-def create_scatter_chart(tool):
+
+def create_scatter_chart(tool: st.SheetTool):
     # Scatter Chart
     scatter_chart = ScatterChart()
     scatter_chart.set_position(
@@ -145,6 +147,7 @@ def json_pretty_dump(data: dict, file_name: str) -> None:
 
     with open(file_name, "w") as f:
         json.dump(data, f, indent=4)
+
 
 if __name__ == "__main__":
     main()

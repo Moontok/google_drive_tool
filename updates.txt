@@ -1,0 +1,84 @@
+ISSUES AND IMPROVEMENTS
+========================
+
+=== BUGS ===
+
+1. chart.py:165-167 — add_border sends malformed colorStyle to API
+   The border colorStyle is set as:
+       "colorStyle": format_color(color)
+   But format_color returns {"red": ..., "green": ..., "blue": ...}, and the API's
+   colorStyle field expects {"rgbColor": {...}}. Every other place in the codebase
+   that uses colorStyle wraps it correctly (e.g., set_background_color at line 116).
+   Fix:
+       "colorStyle": {"rgbColor": format_color(color)}
+
+2. sheets.py:60-69 — _authenticate catches the wrong exception
+   Credentials.from_service_account_file raises FileNotFoundError or ValueError when
+   the file is missing or malformed — never HttpError. The except HttpError block
+   inside _authenticate (and the same pattern in setup) will never catch these errors,
+   so a missing credentials file produces an unhandled exception with no clean message.
+
+3. sheets.py:379-380 — __sheet_id_runner can collide with real sheet IDs after set_spreadsheet
+   __sheet_id_runner starts at 1 and increments locally. When set_spreadsheet() is called
+   on an existing spreadsheet, the runner is never synced to the actual sheet IDs already
+   in use. Subsequent add_sheet_request calls could assign an ID that already exists in
+   Google's data, causing the batch update to fail.
+   Fix: at the end of set_spreadsheet(), set __sheet_id_runner to
+   max(__current_sheets.values()) + 1.
+
+4. sheets.py:240-251 — _get_last_row_and_column crashes with a confusing error for unknown sheets
+   If sheet_name is not found, target_sheet stays None, and
+   target_sheet["properties"]["gridProperties"] raises TypeError. Should raise a
+   KeyError or ValueError with the sheet name so the caller knows what went wrong.
+
+
+=== DESIGN / QUALITY ISSUES ===
+
+5. chart.py:179-191 — chart_request() validates basicChart but not PieChart
+   The method checks that basicChart has domain, series, and axis set, but there is no
+   equivalent check for PieChart. A PieChart with no domain or series will pass
+   validation and produce an API error rather than a clear local error.
+
+6. sheets.py:345-411 and sheets.py:393-410 — local state mutates before the API call succeeds
+   change_sheet_name_request and delete_sheet_request both update __current_sheets
+   immediately, but the actual API change only happens when batch_update() is called.
+   If batch_update() raises or is never called, local state diverges from Google.
+   Consider mutating __current_sheets only inside batch_update() after a successful
+   response, or document this clearly so callers know not to rely on the local state
+   until after the batch.
+
+7. sheets.py:254-267 and sheets.py:269-285 — batch_update / batch_update_values make API calls
+   when the pool is empty
+   If either method is called with nothing queued, it sends an empty request body to
+   the API. An early return when the list is empty avoids a wasted network round-trip.
+
+8. formatting.py:9 — Color.PURPLE is actually magenta
+   PURPLE = (1, 0, 1) is full red + full blue with no green, which is magenta.
+   True purple is closer to (0.5, 0, 0.5).
+
+9. formatting.py:82-148 — cell_font_format and chart_font_format are nearly identical
+   The only difference is that cell_font_format has strikethrough and underline
+   parameters. These could be one function: chart callers simply wouldn't pass those
+   two arguments. Keeping two near-duplicate functions means any future change (e.g.,
+   adding opacity) must be made in both places.
+
+10. sheets.py throughout / formatting.py:63 — parameter named `range` shadows the built-in
+    Many methods use `range` as a parameter name (process_range, fill_request,
+    get_values, etc.), shadowing Python's built-in range(). Rename to range_str or
+    cell_range throughout to avoid the shadow and improve clarity.
+
+11. sheets.py:412 — hideGridlines parameter violates Python naming conventions
+    The parameter should be hide_gridlines (snake_case) to match all other parameters
+    in the file.
+
+12. sheets.py:754-760 — _process_range_as_str has a wrong docstring
+    The docstring says "Adds the request to requests pool. This will update when the
+    next batch_update is called." — this is copied from batch methods and is completely
+    wrong. The function is a pure utility that parses a string into a tuple.
+
+13. chart.py:367 and chart.py:380 — LineChart methods hardcode "basicChart" instead of
+    using self._chart_type
+    set_series_line_style and set_line_smoothing access
+    self._chart["spec"]["basicChart"] directly. While this isn't a functional bug
+    today (LineChart always has _chart_type == "basicChart"), it's inconsistent with
+    the rest of the chart methods, which use self._chart_type.

@@ -9,7 +9,7 @@ class Color:
     BLACK = (0, 0, 0)
     WHITE = (1, 1, 1)
     YELLOW = (1, 1, 0)
-    PURPLE = (1, 0, 1)
+    PURPLE = (0.5, 0, 0.5)
     CYAN = (0, 1, 1)
     ORANGE = (1, 0.5, 0)
     PINK = (1, 0.5, 0.5)

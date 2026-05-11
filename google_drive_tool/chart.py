@@ -180,16 +180,19 @@ class Chart:
 
         if not self._chart["position"]:
             raise ValueError("Chart position not set")
-        if not self._chart["spec"][self._chart_type]:
+        
+        spec: dict = self._chart["spec"][self._chart_type]
+        if not spec:
             raise ValueError("Chart type not set")
-        if self._chart_type == "basicChart" or self._chart_type == "pieChart":
-            if len(self._chart["spec"][self._chart_type]["domains"]) == 0:
+        
+        if self._chart_type in ("basicChart", "pieChart"):
+            if not spec.get("domains"):
                 raise ValueError("Chart domain not set")
-            if len(self._chart["spec"][self._chart_type]["series"]) == 0:
+            if not spec.get("series"):
                 raise ValueError("Chart series not set")
-        if self._chart_type == "basicChart":
-            if len(self._chart["spec"][self._chart_type]["axis"]) == 0:
-                raise ValueError("Chart axis not set")
+            
+        if self._chart_type == "basicChart" and not spec.get("axis"):
+            raise ValueError("Chart axis not set")
 
         return {"addChart": {"chart": self._chart}}
 

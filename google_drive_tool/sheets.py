@@ -41,11 +41,11 @@ class SheetTool:
 
         try:
             self._authenticate(service_account_file)
-            self.__service = build("sheets", "v4", credentials=self.__creds)
+            self.__service: Resource = build("sheets", "v4", credentials=self.__creds)
         except HttpError as e:
             raise e
 
-        self.__sheet = self.__service.spreadsheets()
+        self.__sheet: Resource = self.__service.spreadsheets()
 
     def _authenticate(self, service_account_file: str) -> Credentials:
         """Authenticate the Google Sheets API
@@ -263,33 +263,31 @@ class SheetTool:
         This will execute all requests in the order they were added
         and then clear the requests pool.
         """
-
-        try:
-            body: dict = {"requests": self.__requests}
-            self.__sheet.batchUpdate(
-                spreadsheetId=self.__spreadsheet_id, body=body
-            ).execute()
-            self.__requests.clear()
-        except HttpError as e:
-            raise e
+        if not self.__requests:
+            return
+        
+        body: dict = {"requests": self.__requests}
+        self.__sheet.batchUpdate(
+            spreadsheetId=self.__spreadsheet_id, body=body
+        ).execute()
+        self.__requests.clear()
 
     def batch_update_values(self) -> None:
         """Batch updates all current value requests.
         This will execute all update_values_requests in the order they were added
         and then clear the update_values_requests pool.
         """
+        if not self.__update_values_requests:
+            return
 
-        try:
-            values_body = {
-                "valueInputOption": "USER_ENTERED",
-                "data": self.__update_values_requests,
-            }
-            self.__sheet.values().batchUpdate(
-                spreadsheetId=self.__spreadsheet_id, body=values_body
-            ).execute()
-            self.__update_values_requests.clear()
-        except HttpError as e:
-            raise e
+        values_body = {
+            "valueInputOption": "USER_ENTERED",
+            "data": self.__update_values_requests,
+        }
+        self.__sheet.values().batchUpdate(
+            spreadsheetId=self.__spreadsheet_id, body=values_body
+        ).execute()
+        self.__update_values_requests.clear()
 
     def append_values(self, value: list[list], cell: str = "A1") -> None:
         """Append a list of lists of values in the next empty cell in that column

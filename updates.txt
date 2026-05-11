@@ -9,11 +9,6 @@ ISSUES AND IMPROVEMENTS
 
 === DESIGN / QUALITY ISSUES ===
 
-5. chart.py:179-191 — chart_request() validates basicChart but not PieChart
-   The method checks that basicChart has domain, series, and axis set, but there is no
-   equivalent check for PieChart. A PieChart with no domain or series will pass
-   validation and produce an API error rather than a clear local error.
-
 6. sheets.py:345-411 and sheets.py:393-410 — local state mutates before the API call succeeds
    change_sheet_name_request and delete_sheet_request both update __current_sheets
    immediately, but the actual API change only happens when batch_update() is called.
@@ -21,11 +16,6 @@ ISSUES AND IMPROVEMENTS
    Consider mutating __current_sheets only inside batch_update() after a successful
    response, or document this clearly so callers know not to rely on the local state
    until after the batch.
-
-7. sheets.py:254-267 and sheets.py:269-285 — batch_update / batch_update_values make API calls
-   when the pool is empty
-   If either method is called with nothing queued, it sends an empty request body to
-   the API. An early return when the list is empty avoids a wasted network round-trip.
 
 8. formatting.py:9 — Color.PURPLE is actually magenta
    PURPLE = (1, 0, 1) is full red + full blue with no green, which is magenta.

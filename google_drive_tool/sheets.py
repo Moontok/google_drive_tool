@@ -140,12 +140,12 @@ class SheetTool:
         except HttpError as e:
             raise e
 
-    def get_values(self, range: str) -> Optional[dict]:
+    def get_values(self, cell_range: str) -> Optional[dict]:
         """Returns the values of a specified range.
         This is not batched and will be executed immediately.
 
         Args:
-            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
+            cell_range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
 
         Returns:
             Optional[dict]: Values of the specified range
@@ -153,7 +153,7 @@ class SheetTool:
 
         response = (
             self.__sheet.values()
-            .get(spreadsheetId=self.__spreadsheet_id, range=range)
+            .get(spreadsheetId=self.__spreadsheet_id, range=cell_range)
             .execute()
         )
         return response.get("values")
@@ -191,17 +191,17 @@ class SheetTool:
 
         self.__requests.append(request)
 
-    def clear_sheet_values(self, range: str) -> None:
+    def clear_sheet_values(self, cell_range: str) -> None:
         """Clear the values of a sheet.
         This is not batched and will be executed immediately.
 
         Args:
-            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
+            cell_range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
         """
 
         try:
             self.__sheet.values().clear(
-                spreadsheetId=self.__spreadsheet_id, range=range
+                spreadsheetId=self.__spreadsheet_id, range=cell_range
             ).execute()
         except HttpError as e:
             raise e
@@ -450,7 +450,7 @@ class SheetTool:
             }
         )
 
-    def resize_request(self, range: str, size: int) -> None:
+    def resize_request(self, cell_range: str, size: int) -> None:
         """Resize a column or row by specified number of pixels.
         Adds the request to requests pool.
         This will update when the next batch_update is called.
@@ -466,7 +466,7 @@ class SheetTool:
             size (int): Size to resize the column or row.
         """
 
-        processed_range: tuple = self.process_range(range)
+        processed_range: tuple = self.process_range(cell_range)
 
         dimension: str = ""
         start_index: int = 0
@@ -497,7 +497,7 @@ class SheetTool:
 
     def align_and_wrap_cells_request(
         self,
-        range: str,
+        cell_range: str,
         horizontal: str = "LEFT",
         vertical: str = "BOTTOM",
         wrapping: str = "CLIP",
@@ -516,13 +516,13 @@ class SheetTool:
             - WRAP
 
         Args:
-            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
+            cell_range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
             horizontal (str, optional): Horizontal alignment. Defaults to "LEFT".
             vertical (str, optional): Vertical alignment. Defaults to "BOTTOM".
             wrapping (str, optional): Wrapping strategy. Defaults to "CLIP".
         """
 
-        processed_range: tuple = self.process_range(range)
+        processed_range: tuple = self.process_range(cell_range)
 
         format_style = {
             "repeatCell": {
@@ -539,7 +539,7 @@ class SheetTool:
         }
         self.__requests.append(format_style)
 
-    def merge_cells_request(self, range: str, merge_type: str = "MERGE_ALL") -> None:
+    def merge_cells_request(self, cell_range: str, merge_type: str = "MERGE_ALL") -> None:
         """Merge cells in the provided range based on merge type.
         Adds the request to requests pool.
         This will update when the next batch_update is called.
@@ -550,11 +550,11 @@ class SheetTool:
             - MERGE_ROWS
 
         Args:
-            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
+            cell_range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
             merge_type (str, optional): Type of merge. Defaults to "MERGE_ALL".
         """
 
-        processed_range: tuple = self.process_range(range)
+        processed_range: tuple = self.process_range(cell_range)
 
         format_style = {
             "mergeCells": {
@@ -566,7 +566,7 @@ class SheetTool:
 
     def format_font_request(
         self,
-        range: str,
+        cell_range: str,
         family: str = "Arial",
         font_size: int = 10,
         bold: bool = False,
@@ -580,7 +580,7 @@ class SheetTool:
         This will update when the next batch_update is called.
 
         Args:
-            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
+            cell_range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
             family (str, optional): Font family. Defaults to "Arial".
             font_size (int, optional): Font size. Defaults to 10.
             bold (bool, optional): Bold text. Defaults to False.
@@ -590,7 +590,7 @@ class SheetTool:
             color (tuple, optional): Color of the text (Red, Green, Blue). Defaults to Color.BLACK or (0, 0, 0).
         """
 
-        processed_range: tuple = self.process_range(range)
+        processed_range: tuple = self.process_range(cell_range)
 
         format_style = {
             "repeatCell": {
@@ -613,17 +613,17 @@ class SheetTool:
         }
         self.__requests.append(format_style)
 
-    def fill_request(self, range: str, fill_color: tuple = Color.WHITE) -> None:
+    def fill_request(self, cell_range: str, fill_color: tuple = Color.WHITE) -> None:
         """Set the background fill for a range of cells.
         Adds the request to requests pool.
         This will update when the next batch_update is called.
 
         Args:
-            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1!A1
+            cell_range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1!A1
             fill_color (tuple, optional): Color of the fill (Red, Green, Blue). Defaults to Color.White or (1, 1, 1).
         """
 
-        processed_range: tuple = self.process_range(range)
+        processed_range: tuple = self.process_range(cell_range)
 
         format_style = {
             "repeatCell": {
@@ -638,7 +638,7 @@ class SheetTool:
 
     def set_outer_border_request(
         self,
-        range: str,
+        cell_range: str,
         type: str = BorderLine.SOLID,
         color: tuple = Color.BLACK,
     ) -> None:
@@ -656,12 +656,12 @@ class SheetTool:
             - NONE
 
         Args:
-            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
+            cell_range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
             type (str, optional): Type of border. Defaults to "SOLID".
             color (tuple, optional): Color of the border. Defaults to Color.BLACK or (0, 0, 0).
         """
 
-        processed_range: tuple = self.process_range(range)
+        processed_range: tuple = self.process_range(cell_range)
 
         border_format = {
             "updateBorders": {
@@ -675,7 +675,7 @@ class SheetTool:
         self.__requests.append(border_format)
 
     def set_bottom_border_request(
-        self, range: str, type: str = BorderLine.SOLID, color: tuple = Color.BLACK
+        self, cell_range: str, type: str = BorderLine.SOLID, color: tuple = Color.BLACK
     ) -> None:
         """Set the bottom border for a range of cells.
         Adds the request to requests pool.
@@ -691,12 +691,12 @@ class SheetTool:
             - NONE
 
         Args:
-            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
+            cell_range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
             type (str, optional): Type of border. Defaults to "SOLID".
             color (tuple, optional): Color of the border. Defaults to Color.BLACK or (0, 0, 0).
         """
 
-        processed_range: tuple = self.process_range(range)
+        processed_range: tuple = self.process_range(cell_range)
 
         border_format = {
             "updateBorders": {
@@ -719,57 +719,57 @@ class SheetTool:
 
         return {"style": type, "color": format_color(color)}
 
-    def process_range(self, range: str) -> tuple:
+    def process_range(self, cell_range: str) -> tuple:
         """Process the range as integers or strings.
 
         Args:
-            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1 or 1,2,3,4
+            cell_range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1 or 1,2,3,4
 
         Returns:
             tuple: Processed range
         """
 
-        if "," in range:
-            return self._process_range_as_ints(range)
+        if "," in cell_range:
+            return self._process_range_as_ints(cell_range)
         else:
-            return self._process_range_as_str(range)
+            return self._process_range_as_str(cell_range)
 
-    def _process_range_as_ints(self, range: str) -> tuple:
+    def _process_range_as_ints(self, cell_range: str) -> tuple:
         """Process the range as integers. Some parts of the API require
         the range to be integers instead of letters and numbers.
 
         Args:
-            range (str): Range of the sheet. Ex: "Sheet,1,2,3,4"
+            cell_range (str): Range of the sheet. Ex: "Sheet,1,2,3,4"
 
         Returns:
             tuple: Processed range as integers. Ex: (1,2,3,4,5)
         """
 
-        range = range.split(",")
-        sheet_id: int = self.__current_sheets[range[0]]
+        cell_range = cell_range.split(",")
+        sheet_id: int = self.__current_sheets[cell_range[0]]
 
         return (
             sheet_id,
-            int(range[1]),
-            int(range[2]),
-            int(range[3]),
-            int(range[4]),
+            int(cell_range[1]),
+            int(cell_range[2]),
+            int(cell_range[3]),
+            int(cell_range[4]),
         )
 
-    def _process_range_as_str(self, range: str) -> tuple:
+    def _process_range_as_str(self, cell_range: str) -> tuple:
         """
         Process the range into sheet_id and starting and ending cell.
         Adds the request to requests pool.
         This will update when the next batch_update is called.
 
         Args:
-            range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
+            cell_range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
 
         Returns:
             tuple: Processed range. Ex: (1, 0, 0, 1, 1)
         """
 
-        range_parts: list = range.split("!")
+        range_parts: list = cell_range.split("!")
 
         try:
             sheet_id: int = self.__current_sheets[range_parts[0]]

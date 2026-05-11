@@ -60,22 +60,22 @@ def format_color(color: tuple) -> dict:
     }
 
 
-def format_range(range: tuple) -> dict:
+def format_range(cell_range: tuple) -> dict:
     """Format a range.
 
     Args:
-        range: A tuple of 5 integers.
+        cell_range: A tuple of 5 integers.
 
     Returns:
         A dict with the range formatted for the API.
     """
 
     return {
-        "sheetId": range[0],
-        "startColumnIndex": range[1],
-        "startRowIndex": range[2],
-        "endColumnIndex": range[3],
-        "endRowIndex": range[4],
+        "sheetId": cell_range[0],
+        "startColumnIndex": cell_range[1],
+        "startRowIndex": cell_range[2],
+        "endColumnIndex": cell_range[3],
+        "endRowIndex": cell_range[4],
     }
 
 

@@ -17,20 +17,11 @@ ISSUES AND IMPROVEMENTS
    response, or document this clearly so callers know not to rely on the local state
    until after the batch.
 
-8. formatting.py:9 — Color.PURPLE is actually magenta
-   PURPLE = (1, 0, 1) is full red + full blue with no green, which is magenta.
-   True purple is closer to (0.5, 0, 0.5).
-
 9. formatting.py:82-148 — cell_font_format and chart_font_format are nearly identical
    The only difference is that cell_font_format has strikethrough and underline
    parameters. These could be one function: chart callers simply wouldn't pass those
    two arguments. Keeping two near-duplicate functions means any future change (e.g.,
    adding opacity) must be made in both places.
-
-10. sheets.py throughout / formatting.py:63 — parameter named `range` shadows the built-in
-    Many methods use `range` as a parameter name (process_range, fill_request,
-    get_values, etc.), shadowing Python's built-in range(). Rename to range_str or
-    cell_range throughout to avoid the shadow and improve clarity.
 
 11. sheets.py:412 — hideGridlines parameter violates Python naming conventions
     The parameter should be hide_gridlines (snake_case) to match all other parameters

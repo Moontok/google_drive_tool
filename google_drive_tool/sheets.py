@@ -419,7 +419,7 @@ class SheetTool:
         name: str,
         number_of_rows: int = 1000,
         number_of_columns: int = 26,
-        hideGridlines: bool = False,
+        hide_gridlines: bool = False,
     ) -> None:
         """Changes the rows and columns for a sheet.
         Adds the request to requests pool.
@@ -429,13 +429,13 @@ class SheetTool:
             name (str): Name of the sheet to change
             number_of_rows (int, optional): Number of rows to set. Defaults to 1000.
             number_of_columns (int, optional): Number of columns to set. Defaults to 26.
-            hideGridlines (bool, optional): Hide the gridlines. Defaults to False.
+            hide_gridlines (bool, optional): Hide the gridlines. Defaults to False.
         """
 
         new_grid_properties = {
             "rowCount": number_of_rows,
             "columnCount": number_of_columns,
-            "hideGridlines": hideGridlines,
+            "hideGridlines": hide_gridlines,
         }
 
         self.__requests.append(

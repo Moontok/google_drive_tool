@@ -31,6 +31,7 @@ class SheetTool:
         self.__sheet_id_runner: int = 1
         self.__requests = list()
         self.__update_values_requests = list()
+        self.__pending_sheet_mutations = list()
 
     def setup(self, service_account_file) -> None:
         """Setup the Google Sheets API
@@ -271,6 +272,9 @@ class SheetTool:
             spreadsheetId=self.__spreadsheet_id, body=body
         ).execute()
         self.__requests.clear()
+        for mutation in self.__pending_sheet_mutations:
+            mutation()
+        self.__pending_sheet_mutations.clear()
 
     def batch_update_values(self) -> None:
         """Batch updates all current value requests.
@@ -357,19 +361,23 @@ class SheetTool:
             new_name (str): New name of the sheet
         """
 
-        self.__current_sheets[new_name] = self.__current_sheets[old_name]
-        del self.__current_sheets[old_name]
-
+        
+        sheet_id = self.__current_sheets[old_name]
         self.__requests.append(
             {
                 "updateSheetProperties": {
                     "properties": {
-                        "sheetId": self.__current_sheets[new_name],
+                        "sheetId": sheet_id,
                         "title": f"{new_name}",
                     },
                     "fields": "title",
                 }
             }
+        )
+        self.__pending_sheet_mutations.append(
+            lambda o=old_name, n=new_name: (
+                self.__current_sheets.__setitem__(n, self.__current_sheets.pop(o))
+            )
         )
 
     def add_sheet_request(self, name: str) -> None:
@@ -381,18 +389,21 @@ class SheetTool:
             name (str): Name of the sheet to add
         """
 
-        self.__current_sheets[name] = self.__sheet_id_runner
+        sheet_id = self.__sheet_id_runner
         self.__sheet_id_runner += 1
 
         self.__requests.append(
             {
                 "addSheet": {
                     "properties": {
-                        "sheetId": self.__current_sheets[name],
+                        "sheetId": sheet_id,
                         "title": f"{name}",
                     }
                 }
             }
+        )
+        self.__pending_sheet_mutations.append(
+            lambda n=name, sid=sheet_id: self.__current_sheets.__setitem__(n, sid)
         )
 
     def delete_sheet_request(self, name: str) -> None:
@@ -412,7 +423,9 @@ class SheetTool:
             }
         )
 
-        del self.__current_sheets[name]
+        self.__pending_sheet_mutations.append(
+            lambda n=name: self.__current_sheets.pop(n)
+        )
 
     def set_sheet_grid_properties_request(
         self,

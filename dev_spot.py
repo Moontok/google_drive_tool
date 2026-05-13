@@ -22,25 +22,10 @@ def main():
     tool = st.SheetTool()
     tool.setup(g_info_path)
     tool.set_spreadsheet(general_info["sheet_id"])
-
-    chart1: LineChart = LineChart()
-    chart1.set_domain(tool.process_range("Sheet1!A1:A8"))
-    chart1.add_series(
-        tool.process_range("Sheet1!B1:B8"),
-    )
-    chart1.add_axis(title="X Label", position="BOTTOM_AXIS")
-    chart1.add_axis(title="Y Label", position="LEFT_AXIS")
-    chart1.set_position(
-        tool.get_sheet_id("Sheet2"),
-        (1, 1),
-        (600, 400),
-    )
-    chart1.set_title("Cool Beans")
-    chart1.add_border((0, 1, 1))
-    chart1.set_line_smoothing(True)
-    chart1.set_series_line_style(0, ChartLine.MEDIUM_DASHED, 5)
-    tool.add_general_request(chart1.chart_request())
+    tool.change_sheet_name_request("FunName", "OldSchool")
+    print(tool._SheetTool__current_sheets)
     tool.batch_update()
+    print(tool._SheetTool__current_sheets)
 
 
 

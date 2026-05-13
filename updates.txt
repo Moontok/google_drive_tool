@@ -22,10 +22,3 @@ ISSUES AND IMPROVEMENTS
    parameters. These could be one function: chart callers simply wouldn't pass those
    two arguments. Keeping two near-duplicate functions means any future change (e.g.,
    adding opacity) must be made in both places.
-
-13. chart.py:367 and chart.py:380 — LineChart methods hardcode "basicChart" instead of
-    using self._chart_type
-    set_series_line_style and set_line_smoothing access
-    self._chart["spec"]["basicChart"] directly. While this isn't a functional bug
-    today (LineChart always has _chart_type == "basicChart"), it's inconsistent with
-    the rest of the chart methods, which use self._chart_type.

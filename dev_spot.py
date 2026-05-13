@@ -37,6 +37,8 @@ def main():
     )
     chart1.set_title("Cool Beans")
     chart1.add_border((0, 1, 1))
+    chart1.set_line_smoothing(True)
+    chart1.set_series_line_style(0, ChartLine.MEDIUM_DASHED, 5)
     tool.add_general_request(chart1.chart_request())
     tool.batch_update()
 

@@ -370,7 +370,7 @@ class LineChart(BasicChart):
             line_width (int): The width of the line. Ex. 1
         """
 
-        self._chart["spec"]["basicChart"]["series"][location]["lineStyle"] = {
+        self._chart["spec"][self._chart_type]["series"][location]["lineStyle"] = {
             "width": line_width,
             "type": line_style,
         }
@@ -383,7 +383,7 @@ class LineChart(BasicChart):
             smoothing (bool): True to smooth the lines, False to not smooth the lines.
         """
 
-        self._chart["spec"]["basicChart"]["lineSmoothing"] = smoothing
+        self._chart["spec"][self._chart_type]["lineSmoothing"] = smoothing
 
 
 class ScatterChart(BasicChart):

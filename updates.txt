@@ -23,11 +23,6 @@ ISSUES AND IMPROVEMENTS
    two arguments. Keeping two near-duplicate functions means any future change (e.g.,
    adding opacity) must be made in both places.
 
-12. sheets.py:754-760 — _process_range_as_str has a wrong docstring
-    The docstring says "Adds the request to requests pool. This will update when the
-    next batch_update is called." — this is copied from batch methods and is completely
-    wrong. The function is a pure utility that parses a string into a tuple.
-
 13. chart.py:367 and chart.py:380 — LineChart methods hardcode "basicChart" instead of
     using self._chart_type
     set_series_line_style and set_line_smoothing access

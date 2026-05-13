@@ -757,10 +757,7 @@ class SheetTool:
         )
 
     def _process_range_as_str(self, cell_range: str) -> tuple:
-        """
-        Process the range into sheet_id and starting and ending cell.
-        Adds the request to requests pool.
-        This will update when the next batch_update is called.
+        """Process the range into sheet_id and starting and ending cell.
 
         Args:
             cell_range (str): Range of the sheet. Ex: Sheet1!A1:B2 or Sheet1
